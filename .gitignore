@@ -1,0 +1,10 @@
+*.DS_Store
+*.pkl
+*.stash
+cache
+cache-bak
+data
+*__pycache__
+
+tpers
+ubl_data.py
