@@ -28,15 +28,22 @@ def try_cache(cls, input_args, *args, **kwargs):
     return dat
 
 if __name__ == '__main__':
-    args = parser.parse_args()
+    # args = parser.parse_args()
+    # args = parser.parse_args('--interact --force persist'.split())
+    args = parser.parse_args('--interact'.split())
 
     input_data = try_cache(InputData, args)
 
+    # alpha_cls = AlphaPersistenceInteract if args.interact else
     pers_cls = RipsPersistence if args.rips else AlphaPersistence
     pers_data = try_cache(pers_cls, args, input_data)
 
-    tpers_cls = TPersInteract if args.interact else TPers
-    tpers = tpers_cls(pers_data, **{a : getattr(args, a) for a in TPers.args})
+    tpers = TPers(pers_data, **{a : getattr(args, a) for a in TPers.args})
+
+    if args.interact:
+        if not args.rips:
+            pers_interact = AlphaPersistenceInteract(pers_data)
+        tpers_interact = TPersInteract(tpers)#, pers_interact)
 
     if args.show:
         plt.show(block=False)

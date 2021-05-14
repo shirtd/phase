@@ -37,6 +37,7 @@ class MPLPlot:
 
 class PersistencePlot(MPLPlot):
     def __init__(self):
+        self.current_frame = None
         MPLPlot.__init__(self, 1, 1)
     def plot(self, frame, lim=None):
         fig, ax = self.clear_fig()
@@ -45,6 +46,7 @@ class PersistencePlot(MPLPlot):
         fig.suptitle('%s frame %d' % (self.title, frame), fontsize=8)
         plt.tight_layout()
         self.update_figure()
+        self.current_frame = frame
         return fig, ax
 
 class TimeSeriesPlot(MPLPlot):

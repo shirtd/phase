@@ -9,6 +9,8 @@ class Diagram:
         self.unpairs = set() if unpairs is None else unpairs
     def get_pairs(self):
         return list(sorted(self.pairs.items(), key=lambda p: abs(self.data(p[0]) - self.data(p[1]))))
+    def get_pair(self, i):
+        return np.array([self.data(self.F[i]), self.data(self.F[self[i]])])
     def persistence(self, s):
         if isinstance(s, ColumnBase):
             s = s.simplex
@@ -18,6 +20,8 @@ class Diagram:
     def items(self):
         yield from self.pairs
     def data(self, s):
+        if s is None:
+            return np.inf
         return s.data[self.F.key]
     def __getitem__(self, s):
         if s in self.pairs:
