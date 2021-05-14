@@ -26,7 +26,6 @@ class MetricData(Data):#, PYVPlot):
     def __init__(self, data, name, title, prefix):
         features = ['Coord %d' % i for i in range(1,data.shape[-1]+1)]
         Data.__init__(self, data, name, title, prefix, features)
-        # PYVPlot.__init__(self)
 
 class PersistenceData(Data, PersistencePlot):
     module = 'persist'

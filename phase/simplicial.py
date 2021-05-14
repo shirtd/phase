@@ -54,6 +54,9 @@ class BoundaryColumn:
         return '+'.join([str(s) for s in self])
 
 class Chain(BoundaryColumn): # set of simplices and sorted list of boundary indices
+    @classmethod
+    def sum(cls, *chains):
+        return sum(*chains, cls())
     def __init__(self, simplices=set(), boundary=[]):
         BoundaryColumn.__init__(self, simplices, boundary)
     def __add__(self, other):
@@ -143,6 +146,8 @@ class Filtration:
         self.complex, self.key, self.dim, self.n = complex, key, complex.dim, len(complex)
         self.sequence = list(sorted(complex.smap.values(), key=lambda s: ((-1 if reverse else 1) * s.data[key], s)))
         self.imap = {s : i for i, s in enumerate(self.sequence)}
+    def __len__(self):
+        return len(self.sequence)
     def __iter__(self):
         for s in self.sequence:
             yield s
@@ -162,7 +167,12 @@ class Filtration:
         return list(sorted([self.index(f) for f in s.faces], reverse=reverse))
     # def sort_cofaces(self, s, reverse=True):
     #     return list(sorted([self.index(f) for f in s.cofaces], reverse=reverse))
+    def as_chain(self, s):
+        s = self[s] if isinstance(s, int) else s
+        return Chain({s}, self.sort_faces(s))
+    def boundary(self, chain):
+        return Chain.sum(self.as_chain(i) for i in chain.boundary)
     def get_boundary(self, rng):
-        return {i : Chain({self[i]}, self.sort_faces(self[i])) for i in rng}
+        return {i : self.as_chain(i) for i in rng}
     # def get_coboundary(self, rng):
     #     return {i : CoChain({self[i]}, self.sort_cofaces(self[i])) for i in rng}

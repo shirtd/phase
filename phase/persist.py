@@ -11,12 +11,15 @@ class Diagram:
         return list(sorted(self.pairs.items(), key=lambda p: abs(self.data(p[0]) - self.data(p[1]))))
     def get_pair(self, i):
         return np.array([self.data(self.F[i]), self.data(self.F[self[i]])])
-    def persistence(self, s):
-        if isinstance(s, ColumnBase):
-            s = s.simplex
-        if s in self.unpairs:
-            return np.inf
-        return abs(self.F(s) - self.F(self[s]))
+    def persistence(self, i):
+        b,d = self.get_pair(i)
+        return d - b
+    # def persistence(self, s):
+    #     if isinstance(s, ColumnBase):
+    #         s = s.simplex
+    #     if s in self.unpairs:
+    #         return np.inf
+    #     return abs(self.F(s) - self.F(self[s]))
     def items(self):
         yield from self.pairs
     def data(self, s):

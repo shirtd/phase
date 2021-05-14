@@ -39,9 +39,9 @@ class PersistencePlot(MPLPlot):
     def __init__(self):
         self.current_frame = None
         MPLPlot.__init__(self, 1, 1)
-    def plot(self, frame, lim=None):
+    def plot(self, frame, lim=None, dgm=None):
         fig, ax = self.clear_fig()
-        lim, _ = plot_diagrams(ax, self[frame], lim)
+        lim, _ = plot_diagrams(ax, self[frame] if dgm is None else dgm, lim)
         self.scale_axis(ax, 0, 1.2*lim, 0, 1.2*lim)
         fig.suptitle('%s frame %d' % (self.title, frame), fontsize=8)
         plt.tight_layout()

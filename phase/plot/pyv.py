@@ -26,6 +26,8 @@ class PYVPlot:
     def add_element(self, element, key, **kwargs):
         if self.figure is None:
             self.init_fig()
+        if key in self.elements:
+            self.remove(key)
         self.elements[key] = element
         self.actors[key] = self.figure.add_mesh(element, **kwargs)
         return self.elements[key]
@@ -54,33 +56,48 @@ class PYVPlot:
         element = pyvista.PolyData(points, lines=np.hstack([[len(c)] + c for c in curves]))#.tube(radius=radius)
         return self.add_element(element, key, **kwargs)
 
-#
-# def polyline_from_points(points):
-#     poly = pv.PolyData()
-#     poly.points = points
-#     the_cell = np.arange(0, len(points), dtype=np.int_)
-#     the_cell = np.insert(the_cell, 0, len(points))
-#     poly.lines = the_cell
-#     return poly
-#
-# polyline = polyline_from_points(points)
-# polyline["scalars"] = np.arange(polyline.n_points)
-# tube = polyline.tube(radius=0.1)
-# tube.plot(smooth_shading=True)
-    # def update_figure(self):
-    #     self.figure.canvas.draw()
-    #     self.figure.canvas.flush_events()
-    # def raise_figure(self):
-    #     self.figure.canvas.manager.window.activateWindow()
-    #     self.figure.canvas.manager.window.raise_()
-    # def get_limits(self, mn, mx):
-    #     return mx - 1.05*(mx - mn), 1.05*mx
-    # def scale_axis(self, axis, xmin, xmax, ymin, ymax):
-    #     axis.autoscale(False)
-    #     if xmax > xmin:
-    #         axis.set_xlim(*self.get_limits(xmin, xmax))
-    #     if ymax > ymin:
-    #         axis.set_ylim(*self.get_limits(ymin, ymax))
-
-# class PointCloudPlot(PYVPlot):
-#     def __init__(self, )
+class ChainPlot(PYVPlot):
+    def __init__(self, data):
+        PYVPlot.__init__(self)
+        self.data = data
+    def get_simplex(self, i):
+        return self.data.current_dgm.F[i]
+    def get_cycle(self, i):
+        C = self.data.current_dgm.D[i].simplices
+        if self.get_simplex(i).dim > 0:
+            return [list(s) for s in C]
+        return [v for s in C for v in s]
+    def get_boundary(self, i):
+        C = self.data.current_dgm.D[i].boundary
+        if self.get_simplex(i).dim > 1:
+            return [list(self.get_simplex(l)) for l in C]
+        elif self.get_simplex(i).dim > 0:
+            return [v for l in C for v in self.get_simplex(l)]
+        return []
+    def get_points(self, idx=None):
+        P = self.data.input_data[self.data.current_frame]
+        if idx is None:
+            return P
+        return P[idx]
+    def __getitem__(self, i):
+        return self.data.current_dgm.pairs[i]
+    def plot_vertices(self, V, key, *args, **kwargs):
+        self.plot_points(self.get_points(V), 0.1, *args, **kwargs)
+    def plot_edges(self, V, key, *args, **kwargs):
+        self.plot_points(self.get_points(V), 0.1, *args, **kwargs)
+    def plot_cycle(self, i, key, **kwargs):
+        P, s, c =  self.get_points(), self.get_simplex(i), self.get_cycle(i)
+        if s.dim == 0:
+            return self.plot_points(P[c], key, 0.1, **kwargs)
+        elif s.dim == 1:
+            return self.plot_curves(P, c, key, **kwargs)
+        elif s.dim == 2:
+            return self.plot_faces(P, c, key, opacity=0.5, **kwargs)
+        elif s.dim == 3:
+            return self.plot_polys(P, c, key, **kwargs)
+    def plot_rep(self, i):
+        j = self.data.current_dgm[i]
+        P = self.data.input_data[self.data.current_frame]
+        self.plot_points(self.get_points(), 'points', 0.03)
+        self.plot_cycle(i, 'birth', color='green')
+        self.plot_cycle(self[i], 'death', color='red')
