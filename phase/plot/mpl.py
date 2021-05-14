@@ -55,8 +55,8 @@ class TimeSeriesPlot(MPLPlot):
         for i, (d, v) in enumerate(zip(self.data.T, self.features)):
             ax[0].plot(d, color=self.COLORS[i%len(self.COLORS)], label=v, zorder=1)
             ax[i+1].plot(d, color=self.COLORS[i%len(self.COLORS)], zorder=1)
-            self.scale_axis(ax[i+1], 0, len(self), min(d), max(d))
-        self.scale_axis(ax[0], 0, len(self), self.data.min(), self.data.max())
+            self.scale_axis(ax[i+1], 0, len(self)-1, min(d), max(d))
+        self.scale_axis(ax[0], 0, len(self)-1, self.data.min(), self.data.max())
         ax[-1].set_xlabel('Time')
         ax[0].set_ylabel(self.prefix)
         if plot_legend:
@@ -65,3 +65,18 @@ class TimeSeriesPlot(MPLPlot):
             fig.suptitle('%s' % self.title)
             plt.tight_layout()
         return fig, ax
+
+# class HistoPlot(MPLPlot):
+#     def __init__(self):
+#         MPLPlot.__init__(self, 1, 1)
+#     def plot(self, histos, L):
+#         fig, ax = self.clear_fig()
+#         for histo in histo:
+#             ax.plot(L, histo)
+#         lim, _ = plot_diagrams(ax, self[frame] if dgm is None else dgm, lim)
+#         self.scale_axis(ax, 0, 1.2*lim, 0, 1.2*lim)
+#         fig.suptitle('%s frame %d' % (self.title, frame), fontsize=8)
+#         plt.tight_layout()
+#         self.update_figure()
+#         self.current_frame = frame
+#         return fig, ax

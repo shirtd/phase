@@ -19,6 +19,7 @@ parser.add_argument('--delta', default=0., type=float, help='distance to boundar
 parser.add_argument('--omega', default=0., type=float, help='modulo sub-levelset (relative homology)')
 parser.add_argument('--show', action='store_true', help='show plot')
 parser.add_argument('--interact', action='store_true', help='interactive plot')
+parser.add_argument('--histo', default='tpers', choices={'tpers', 'birth', 'death'}, help='histogram value')
 
 
 parser.add_argument('--pmin', type=float, default=-np.inf, help='minimum total persistence')

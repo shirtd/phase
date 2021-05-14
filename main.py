@@ -38,7 +38,6 @@ def fill_chain(dgm, birth, C=None):
             return fill_chain(dgm, birth, C + dgm.D[dgm.pairs[p]])
     return C
 
-
 if __name__ == '__main__':
     args = parser.parse_args()
     # args = parser.parse_args('--interact --force persist'.split())
@@ -46,7 +45,6 @@ if __name__ == '__main__':
 
     input_data = try_cache(InputData, args)
 
-    # alpha_cls = AlphaPersistenceInteract if args.interact else
     pers_cls = RipsPersistence if args.rips else AlphaPersistence
     pers_data = try_cache(pers_cls, args, input_data)
 
@@ -54,7 +52,7 @@ if __name__ == '__main__':
 
     if args.interact:
         pers_interact = AlphaPersistenceInteract(pers_data) if not args.rips else None
-        tpers_interact = TPersInteract(tpers, pers_interact)
+        tpers_interact = TPersInteract(tpers, pers_interact, args.histo)
 
     if args.show:
         plt.show(block=False)

@@ -1,5 +1,6 @@
 from phase.plot.mpl import MPLPlot, plt
 from phase.plot.pyv import ChainPlot
+from phase.stats import PersHisto
 
 import numpy.linalg as la
 import numpy as np
@@ -22,21 +23,11 @@ class Interact: # (MPLPlot):
             del self.cids[k]
     def run(self):
         input('[ Exit ]')
-        # frame = input(self.prompt())
-        # while frame:
-        #     self.plot_frame(int(frame))
-        #     frame = input(self.prompt())
-        # else:
-        #     input('[ Exit ]')
-    # def print_status(self, frame):
-    #     sys.stdout.write('%d\n%s' % (frame, self.prompt()))
-    #     sys.stdout.flush()
     def onclick(self, event):
         self.press_time = time.time()
     def onrelease(self, event):
         if self.is_event(event):
             frame = self.get_closest(event)
-            # self.print_status(frame)
             self.plot_frame(frame)
             self.data.raise_figure()
     def onpress(self, event):
@@ -46,7 +37,6 @@ class Interact: # (MPLPlot):
             frame = self.get_prev()
         else:
             return
-        # self.print_status(frame)
         self.plot_frame(frame)
         self.data.raise_figure()
     def is_event(self, event):
@@ -65,15 +55,11 @@ class Interact: # (MPLPlot):
         pass
     def plot_prev(self):
         pass
-    # def prompt(self):
-    #     pass
-    # def plot_current(self, frame):
-    #     pass
-
 
 class TPersInteract(Interact):
-    def __init__(self, data, sub=None):
+    def __init__(self, data, sub=None, value='tpers'):
         Interact.__init__(self, data)
+        self.histo = PersHisto(data, value)
         self.sub = sub
         self.data.plot()
         plt.show(block=False)
@@ -86,14 +72,14 @@ class TPersInteract(Interact):
                 self.data.input_data.plot(frame, self.data.lim)
             else:
                 self.sub.plot(frame, self.data.lim, self.data)
+                # self.histo(frame, self.sub.active_dgm)
+            self.histo(frame, self.data.input_data[frame])
             self.plot_current(frame)
             plt.show(block=False)
         else:
             print(' ! Invalid frame')
     def get_closest(self, event):
         return min(max(int(np.round(event.xdata)),0), len(self.data)-1)
-    # def prompt(self):
-    #     return '[ Plot frame (0-%d): ' % len(self)
     def plot_current(self, frame):
         while self.cur_frame_plt:
             self.cur_frame_plt.pop().remove()
@@ -117,17 +103,18 @@ class AlphaPersistenceInteract(Interact, ChainPlot):
         self.connect()
     def plot(self, frame, lim, tpers_data):
         chain_data = self.data.chain_data[frame]
-        dgms = [tpers_data.get_range(dgm) for dgm in self.data[frame]]
+        self.active_dgms = [tpers_data.get_range(dgm) for dgm in self.data[frame]]
         self.active_pairs = {b : d for b,d in chain_data.pairs.items() if tpers_data.inrng(chain_data.get_pair(b))}
         self.sorted_births = sorted(self.active_pairs, key=lambda b: chain_data.persistence(b), reverse=True)
         self.birth_imap = {b : i for i,b in enumerate(self.sorted_births)}
-        res = self.data.plot(frame, lim, dgms)
-        self.plot_frame(self.sorted_births[0])
+        res = self.data.plot(frame, lim, self.active_dgms)
+        self.remove()
+        self.plot_frame()
         return res
     def plot_frame(self, i=None):
         if i is None and len(self.sorted_births):
             i = self.sorted_births[0]
-        else:
+        elif not len(self.sorted_births):
             return
         self.last_frame = i
         self.plot_current(i)
@@ -138,7 +125,6 @@ class AlphaPersistenceInteract(Interact, ChainPlot):
         p = np.array([event.xdata, event.ydata])
         dst = lambda s: la.norm(p - self.data.current_dgm.get_pair(s))
         return min([b for b in self.active_pairs], key=dst)
-        # return min([b for b in self.data.current_dgm.pairs], key=dst)
     def plot_current(self, i):
         while self.cur_frame_plt:
             self.cur_frame_plt.pop().remove()

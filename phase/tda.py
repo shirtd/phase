@@ -46,12 +46,7 @@ class AlphaPersistence(PersistenceData):
     args = ['dim', 'delta', 'omega']
     @classmethod
     def get_prefix(cls, delta, omega, *args, **kwargs):
-        prefix = 'Alpha'
-        # if delta > 0:
-        #     d = {'delta' : delta, 'omega' : omega}
-        #     s = ['%s=%g' % (l,v) for l,v in d.items() if v > 0]
-        #     prefix = '%s (%s)' % (title, ','.join(s))
-        return prefix
+        return 'Alpha'
     @classmethod
     def get_name(cls, input_data, delta, omega,  *args, **kwargs):
         name = '%s_alpha' % input_data.name
@@ -97,35 +92,3 @@ class AlphaPersistence(PersistenceData):
         res = PersistenceData.plot(self, frame, *args, **kwargs)
         self.current_dgm = self.chain_data[frame]
         return res
-# 
-# class AlphaPersistenceInteract(Interact, ChainPlot):
-#     def __init__(self, data):
-#         Interact.__init__(self, data)
-#         ChainPlot.__init__(self, data)
-#         self.data.init_fig()
-#         self.connect()
-#     def plot_frame(self, i):
-#         self.last_frame = i
-#         self.plot_current(i)
-#         self.plot_rep(i)
-#     def get_closest(self, event):
-#         p = np.array([event.xdata, event.ydata])
-#         dst = lambda s: la.norm(p - self.data.current_dgm.get_pair(s))
-#         return min([b for b in self.data.current_dgm.pairs], key=dst)
-#     def plot_current(self, i):
-#         while self.cur_frame_plt:
-#             self.cur_frame_plt.pop().remove()
-#         s = self.data.current_dgm.F[i]
-#         p = self.data.current_dgm.get_pair(i)
-#         self.cur_frame_plt.append(self.data.axis.scatter(p[0], p[1], s=50, color=self.data.COLORS[s.dim], zorder=2))
-#         self.data.update_figure()
-#     def get_next(self):
-#         i = (self.last_frame+1) % self.data.current_dgm.F.n
-#         while not i in self.data.current_dgm.pairs:
-#             i += 1
-#         return i
-#     def get_prev(self):
-#         i = (self.last_frame-1) % self.data.current_dgm.F.n
-#         while not i in self.data.current_dgm.pairs:
-#             i -= 1
-#         return i

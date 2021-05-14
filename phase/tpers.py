@@ -40,35 +40,3 @@ class TPers(Data, TimeSeriesPlot):
         return ([sum(p) / len(p) if len(p) else 0 for p in ps] if average
             else [len(p) for p in ps] if count
             else [sum(p) for p in ps])
-# 
-# class TPersInteract(Interact):
-#     def __init__(self, data):
-#         Interact.__init__(self, data)
-#         self.data.plot()
-#         plt.show(block=False)
-#         self.connect()
-#         self.run()
-#     def plot_frame(self, frame):
-#         if frame < len(self.data):
-#             self.last_frame = frame
-#             self.data.input_data.plot(frame, self.data.lim)
-#             self.plot_current(frame)
-#             plt.show(block=False)
-#         else:
-#             print(' ! Invalid frame')
-#     def get_closest(self, event):
-#         return min(max(int(np.round(event.xdata)),0), len(self.data)-1)
-#     # def prompt(self):
-#     #     return '[ Plot frame (0-%d): ' % len(self)
-#     def plot_current(self, frame):
-#         while self.cur_frame_plt:
-#             self.cur_frame_plt.pop().remove()
-#         for d, ax in enumerate(self.data.axis[1:]):
-#             kwargs = {'color' : self.data.COLORS[d], 's' : 50, 'zorder' : 2}
-#             self.cur_frame_plt.append(ax.scatter([frame], [self.data[frame,d]], **kwargs))
-#             self.cur_frame_plt.append(self.data.axis[0].scatter([frame], [self.data[frame,d]], **kwargs))
-#         self.data.update_figure()
-#     def get_next(self):
-#         return (self.last_frame+1) % len(self.data)
-#     def get_prev(self):
-#         return (self.last_frame-1) % len(self.data)
