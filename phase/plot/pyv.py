@@ -79,18 +79,6 @@ class ChainPlot(PYVPlot):
     def get_boundary(self, i):
         C = [self.get_simplex(l) for l in self.current_dgm.D[i].boundary]
         return self.format_cycle(C, self.get_simplex(i).dim-1)
-    # def get_cycle(self, i):
-    #     C = self.current_dgm.D[i].simplices
-    #     if self.get_simplex(i).dim > 0:
-    #         return [list(s) for s in C]
-    #     return [v for s in C for v in s]
-    # def get_boundary(self, i):
-    #     C = self.current_dgm.D[i].boundary
-    #     if self.get_simplex(i).dim > 1:
-    #         return [list(self.get_simplex(l)) for l in C]
-    #     elif self.get_simplex(i).dim > 0:
-    #         return [v for l in C for v in self.get_simplex(l)]
-    #     return []
     def get_points(self, idx=None):
         if idx is None:
             return self.current_dgm.F.complex.P
@@ -112,22 +100,3 @@ class ChainPlot(PYVPlot):
             return self.plot_faces(P, c, key, opacity=0.5, **kwargs)
         elif dim == 3:
             return self.plot_faces(P, c, key, **kwargs)
-    # def plot_dual(self, i, key, **kwargs):
-    #     s = self.get_simplex(i)
-    #     if s.dim < 2:
-    #         return
-    #     V, E, F, C = self.data.dual()
-    # def plot_rep(self, i):
-    #     j = self.data.current_dgm[i]
-    #     P = self.data.input_data[self.data.current_frame]
-    #     # R = self.data.current_dgm.R
-    #     # if not 'boundary' in self.elements and R:
-    #     #     bdy = []
-    #     #     for j in R:
-    #     #         s = self.get_simplex(j)
-    #     #         if s.dim == 2:
-    #     #             bdy.append(list(s))
-    #     #     self.plot_faces(P, bdy, 'boundary', color='white', opacity=0.01)
-    #     self.plot_points(self.get_points(), 'points', 0.03)
-    #     self.plot_cycle(i, 'birth', color='green')
-    #     self.plot_cycle(self[i], 'death', color='red')

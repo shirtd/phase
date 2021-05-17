@@ -44,29 +44,18 @@ class AlphaPersistence(MyPersistence):
     @classmethod
     def get_prefix(cls, *args, **kwargs):
         return 'alpha'
-    # def __init__(self, *args, **kwargs):
-    #     MyPersistence.__init__(self, *args, **kwargs)
-    #     self.current_dgm, self.dual = None, None
     def __call__(self, P, dim):
         P.dtype = float
         K = AlphaComplex(P, 'alpha')
         F = Filtration(K, 'alpha')
         R = self.get_boundary(P, F)
         return Diagram(F, R, self.coh)
-    # def plot(self, frame, *args, **kwargs):
-    #     res = PersistenceData.plot(self, frame, *args, **kwargs)
-    #     self.current_dgm = self.chain_data[frame]
-    #     # self.dual = VoronoiDual(self.input_data[frame], self.current_dgm.F, self.current_dgm.R)
-    #     return res
 
 class VoronoiPersistence(MyPersistence):
     args = ['dim', 'delta', 'omega', 'coh']
     @classmethod
     def get_prefix(cls, *args, **kwargs):
         return 'dual'
-    # def __init__(self, *args, **kwargs):
-    #     PersistenceData.__init__(self, *args, **kwargs)
-    #     self.current_dgm, self.dual = None, None
     def __call__(self, P, dim):
         P.dtype = float
         K = AlphaComplex(P, 'alpha')
@@ -82,8 +71,3 @@ class VoronoiPersistence(MyPersistence):
         R = self.get_boundary(P, F)
         S = {G.index(L(F[i])) for i in R}
         return Diagram(G, S, self.coh)
-    # def plot(self, frame, *args, **kwargs):
-    #     res = PersistenceData.plot(self, frame, *args, **kwargs)
-    #     self.current_dgm = self.chain_data[frame]
-    #     # self.dual = VoronoiDual(self.input_data[frame], self.current_dgm.F, self.current_dgm.R)
-    #     return res

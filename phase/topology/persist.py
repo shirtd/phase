@@ -64,8 +64,7 @@ class Diagram:
     def get_diagram(self):
         dgms = [np.ndarray((0,2), dtype=float) for d in range(self.F.dim+1)]
         for i,j in self.items():
-            p = self(i) # self(i)[::-1] if self.F.reverse else self(i)
-            # if (self.F.reverse and p[0] > p[1]) or (not self.F.reverse and p[0] < p[1]):
+            p = self(i)
             if p[0] < p[1]:
                 dgms[self.F[i].dim] = np.vstack((dgms[self.F[i].dim], p))
         for i in self.unpairs:
