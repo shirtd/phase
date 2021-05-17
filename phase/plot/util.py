@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from phase.util import get_lim
+from phase.topology.util import get_lim
 import numpy as np
 import os
 

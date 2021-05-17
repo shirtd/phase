@@ -2,6 +2,9 @@ from phase.plot.mpl import MPLPlot, plt
 from phase.plot.pyv import ChainPlot
 from phase.stats import PersHisto
 
+from phase.topology.util import fill_chain
+from phase.topology.cells import DualComplex
+
 import numpy.linalg as la
 import numpy as np
 import time
@@ -93,7 +96,7 @@ class TPersInteract(Interact):
     def get_prev(self):
         return (self.last_frame-1) % len(self.data)
 
-class AlphaPersistenceInteract(Interact, ChainPlot):
+class MyPersistenceInteract(Interact, ChainPlot):
     def __init__(self, data):
         Interact.__init__(self, data)
         ChainPlot.__init__(self, data)
@@ -101,11 +104,23 @@ class AlphaPersistenceInteract(Interact, ChainPlot):
         self.sorted_births = []
         self.data.init_fig()
         self.connect()
+        self.dualized = False
+        self.filled = False
+        self.current_dual = None
+    def onpress(self, event):
+        if event.key == 'd':
+            self.plot_dual()
+        # if event.key == 'e':
+        #     self.plot_dual(True)
+        if event.key == 'c':
+            self.fill_cycle()
+        Interact.onpress(self, event)
     def plot(self, frame, lim, tpers_data):
-        chain_data = self.data.chain_data[frame]
+        self.current_dual = None
+        self.current_dgm = self.data.chain_data[frame]
         self.active_dgms = [tpers_data.get_range(dgm) for dgm in self.data[frame]]
-        self.active_pairs = {b : d for b,d in chain_data.pairs.items() if tpers_data.inrng(chain_data.get_pair(b))}
-        self.sorted_births = sorted(self.active_pairs, key=lambda b: chain_data.persistence(b), reverse=True)
+        self.active_pairs = {b : d for b,d in self.current_dgm.items() if tpers_data.inrng(self.current_dgm(b))}
+        self.sorted_births = sorted(self.active_pairs, key=lambda b: self.current_dgm.persistence(b), reverse=True)
         self.birth_imap = {b : i for i,b in enumerate(self.sorted_births)}
         res = self.data.plot(frame, lim, self.active_dgms)
         self.remove()
@@ -123,16 +138,141 @@ class AlphaPersistenceInteract(Interact, ChainPlot):
         if not len(self.active_pairs):
             return None
         p = np.array([event.xdata, event.ydata])
-        dst = lambda s: la.norm(p - self.data.current_dgm.get_pair(s))
+        dst = lambda s: la.norm(p - self.current_dgm(s))
         return min([b for b in self.active_pairs], key=dst)
     def plot_current(self, i):
         while self.cur_frame_plt:
             self.cur_frame_plt.pop().remove()
-        s = self.data.current_dgm.F[i]
-        p = self.data.current_dgm.get_pair(i)
+        s = self.current_dgm.F[i]
+        p = self.current_dgm(i)
         self.cur_frame_plt.append(self.data.axis.scatter(p[0], p[1], s=50, color=self.data.COLORS[s.dim], zorder=2))
         self.data.update_figure()
     def get_next(self):
         return self.sorted_births[(self.birth_imap[self.last_frame]+1) % len(self.sorted_births)]
     def get_prev(self):
         return self.sorted_births[(self.birth_imap[self.last_frame]-1) % len(self.sorted_births)]
+    def plot_rep(self, i):
+        self.remove('dual_death')
+        self.remove('dual_birth')
+        self.dualized = False
+        self.filled = False
+        self.plot_points(self.get_points(), 'points', 0.03)
+        self.plot_cycle(i, 'birth', color='green')
+        self.plot_cycle(self[i], 'death', color='red')
+    def fill_cycle(self):
+        if self.last_frame is None:
+            return
+        if self.filled:
+            return self.plot_rep(self.last_frame)
+        C = fill_chain(self.current_dgm, self.last_frame)
+        s = self.get_simplex(self[self.last_frame])
+        self.plot_chain(self.get_points(), self.format_cycle(C, s.dim), s.dim, 'death', color='red')
+        self.filled = True
+    def plot_dual(self, ext=False):
+        if self.last_frame is None:
+            return
+        if self.dualized:
+            return self.plot_rep(self.last_frame)
+        # self.remove('birth')
+        # self.remove('death')
+        s = self.get_simplex(self.last_frame)
+        dB, dD = self.get_dual(self.last_frame)
+        bdim = self.current_dgm.F.dim - s.dim
+        ddim, P = bdim - 1, self.current_dual.P
+        b = self.format_cycle(dB, bdim, self.current_dual)
+        d = self.format_cycle(dD, ddim, self.current_dual)
+        self.plot_points(P, 'points', 0.03, color='black')
+        self.plot_chain(P, b, bdim, 'birth', color='blue')
+        self.plot_chain(P, d, ddim, 'death', color='orange')
+        self.dualized = True
+
+class AlphaPersistenceInteract(MyPersistenceInteract):
+    def __init__(self, data):
+        MyPersistenceInteract.__init__(self, data)
+        self.current_dual = None
+    def get_dual(self, i):
+        K = self.current_dgm.F.complex
+        # C = fill_chain(self.current_dgm, i)
+        B = self.current_dgm.D[i]
+        D = fill_chain(self.current_dgm, i)
+        if self.current_dual is None:
+            self.current_dual = DualComplex(K, 'alpha')
+        birth = [self.current_dual(t) for t in B]
+        death = [self.current_dual(t) for t in D]
+        return birth, death
+
+class VoronoiPersistenceInteract(MyPersistenceInteract):
+    def __init__(self, data):
+        MyPersistenceInteract.__init__(self, data)
+    def get_dual(self, i):
+        K = self.current_dgm.F.complex
+        # C = fill_chain(self.current_dgm, i)
+        B = self.current_dgm.D[i]
+        D = fill_chain(self.current_dgm, i)
+        if self.current_dual is None:
+            self.current_dual = K.K
+        # print(next(iter(fill_chain(self.current_dgm, i))), next(iter(self.current_dgm.D[i])))
+        birth = [K.pmap[t] for t in B]
+        death = [K.pmap[t] for t in D]
+        return birth, death
+
+
+
+# class AlphaPersistenceInteract(MyPersistenceInteract):
+#     def plot_rep(self, i):
+#         if 'dual_death' in self.elements:
+#             self.remove('dual_death')
+#         if 'dual_birth' in self.elements:
+#             self.remove('dual_birth')
+#         self.dualized = False
+#         self.filled = False
+#         self.plot_points(self.get_points(), 'points', 0.03)
+#         self.plot_cycle(i, 'birth', color='green')
+#         self.plot_cycle(self[i], 'death', color='red')
+    # def fill_cycle(self):
+    #     if self.last_frame is None:
+    #         return
+    #     if self.filled:
+    #         self.remove('dual_death')
+    #         self.remove('dual_birth')
+    #         self.plot_cycle(self[self.last_frame], 'death', color='red')
+    #         self.filled = False
+    #         self.dualized = False
+    #     else:
+    #         C = [list(s) for s in fill_chain(self.current_dgm, self.last_frame)]
+    #         s = self.get_simplex(self[self.last_frame])
+    #         self.plot_chain(C, s.dim, 'death', color='red')
+    #         self.filled = True
+    # def plot_dual(self, ext=False):
+    #     if self.last_frame is None:
+    #         return
+    #     if self.dualized:
+    #         self.remove('dual_death')
+    #         self.remove('dual_birth')
+    #         self.plot_cycle(self[self.last_frame], 'death', color='red')
+    #         self.dualized = False
+    #         self.filled = False
+    #     else:
+    #         s = self.get_simplex(self.last_frame)
+    #         if s.dim < 2 and not ext:
+    #             return
+    #         C = fill_chain(self.current_dgm, self.last_frame)
+    #         E, F = self.data.dual.tet_chain_dual(C, ext)
+    #         self.remove('death')
+    #         if len(E):
+    #             self.plot_curves(self.data.dual.Q, E, 'dual_death')
+    #         if len(F):
+    #             self.plot_faces(self.data.dual.Q, F, 'dual_birth', color='blue', opacity=0.3)
+    #         self.dualized = True
+#
+# class VoronoiPeristenceInteract(MyPersistenceInteract):
+#     def plot_rep(self, i):
+#         if 'dual_death' in self.elements:
+#             self.remove('dual_death')
+#         if 'dual_birth' in self.elements:
+#             self.remove('dual_birth')
+#         self.dualized = False
+#         self.filled = False
+#         self.plot_points(self.get_points(), 'points', 0.03)
+#         self.plot_cycle(i, 'birth', color='green')
+#         self.plot_cycle(self[i], 'death', color='red')

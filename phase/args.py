@@ -20,6 +20,8 @@ parser.add_argument('--omega', default=0., type=float, help='modulo sub-levelset
 parser.add_argument('--show', action='store_true', help='show plot')
 parser.add_argument('--interact', action='store_true', help='interactive plot')
 parser.add_argument('--histo', default='tpers', choices={'tpers', 'birth', 'death'}, help='histogram value')
+parser.add_argument('--coh', action='store_true', help='do persistent cohomology')
+parser.add_argument('--dual', action='store_true', help='do dual voronoi persistence')
 
 
 parser.add_argument('--pmin', type=float, default=-np.inf, help='minimum total persistence')

@@ -1,13 +1,15 @@
 from phase.args import parser
-from phase.data import *
+# from phase.data import *
+from phase.base import InputData
 from phase.tda import *
 from phase.tpers import *
-from phase.simplicial import Chain
-from phase.plot.interact import TPersInteract, AlphaPersistenceInteract
+from phase.topology.chains import Chain
+from phase.plot.interact import *
 
 from phase.plot.util import plot_diagrams
 
 import pickle as pkl
+import os
 
 # plt.ion()
 
@@ -29,29 +31,23 @@ def try_cache(cls, input_args, *args, **kwargs):
         print(err)
     return dat
 
-def fill_chain(dgm, birth, C=None):
-    C = dgm.D[dgm.pairs[birth]] if C is None else C
-    diff = dgm.F.boundary(C) + dgm.D[birth]
-    if len(diff):
-        p = max(dgm.F.index(s) for s in dgm.F.boundary(C) + dgm.D[birth])
-        if p in dgm.pairs:
-            return fill_chain(dgm, birth, C + dgm.D[dgm.pairs[p]])
-    return C
-
 if __name__ == '__main__':
     args = parser.parse_args()
     # args = parser.parse_args('--interact --force persist'.split())
-    # args = parser.parse_args('--interact'.split())
+    # args = parser.parse_args('--interact --delta 1 --coh --force persist'.split())
+    # args = parser.parse_args('--interact --delta 1 --coh'.split())
+    # args = parser.parse_args('--interact --delta 1 --dual --force persist'.split())
 
     input_data = try_cache(InputData, args)
 
-    pers_cls = RipsPersistence if args.rips else AlphaPersistence
+    pers_cls = RipsPersistence if args.rips else VoronoiPersistence if args.dual else AlphaPersistence
     pers_data = try_cache(pers_cls, args, input_data)
 
     tpers = TPers(pers_data, **{a : getattr(args, a) for a in TPers.args})
 
     if args.interact:
-        pers_interact = AlphaPersistenceInteract(pers_data) if not args.rips else None
+
+        pers_interact = None if args.rips else VoronoiPersistenceInteract(pers_data) if args.dual else AlphaPersistenceInteract(pers_data)
         tpers_interact = TPersInteract(tpers, pers_interact, args.histo)
 
     if args.show:

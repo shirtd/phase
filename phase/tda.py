@@ -1,10 +1,16 @@
-from phase.base import PersistenceData
-from phase.data import BOUNDS
-from phase.simplicial import DioComplex, Filtration
-from phase.persist import phcol
+from phase.base import PersistenceData, MyPersistence, BOUNDS
+from phase.util import format_float
+
+from phase.topology.cells import DualComplex
+from phase.topology.simplicial import AlphaComplex
+from phase.topology.chains import Filtration
+from phase.topology.persist import Diagram
+
 from phase.plot.pyv import PYVPlot, ChainPlot
 from phase.plot.mpl import PersistencePlot
 from phase.plot.interact import Interact
+
+from phase.duality import VoronoiDual
 
 from ripser import ripser
 import numpy.linalg as la
@@ -33,62 +39,51 @@ class RipsPersistence(PersistenceData):
     def __call__(self, d, dim, thresh):
         return ripser(d, dim, thresh)['dgms']
 
-def format_float(f):
-    if f.is_integer():
-        return int(f)
-    e = 0
-    while not f.is_integer():
-        f *= 10
-        e -= 1
-    return '%de%d' % (int(f), e)
 
-class AlphaPersistence(PersistenceData):
-    args = ['dim', 'delta', 'omega']
+class AlphaPersistence(MyPersistence):
     @classmethod
-    def get_prefix(cls, delta, omega, *args, **kwargs):
-        return 'Alpha'
-    @classmethod
-    def get_name(cls, input_data, delta, omega,  *args, **kwargs):
-        name = '%s_alpha' % input_data.name
-        if delta > 0 or omega > 0:
-            d = {'delta' : delta, 'omega' : omega}
-            s = ['%s%s' % (l,format_float(v)) for l,v in d.items() if v > 0]
-            name = '-'.join([name] + s)
-        return name
-    @classmethod
-    def get_title(cls, input_data, delta, omega, *args, **kwargs):
-        title = '%s alpha' % input_data.title
-        if delta > 0 or omega > 0:
-            d = {'delta' : delta, 'omega' : omega}
-            s = ['%s=%g' % (l,v) for l,v in d.items() if v > 0]
-            title = '%s (%s)' % (title, ','.join(s))
-        return title
-    def __init__(self, input_data, dim, delta, omega):
-        name = self.get_name(input_data, delta, omega)
-        title = self.get_title(input_data, delta, omega)
-        prefix = self.get_prefix(delta, omega)
-        self.delta, self.omega = delta, omega
-        self.bounds = (BOUNDS[0]+delta, BOUNDS[1]-delta)
-        dim = input_data.data.shape[-1]
-        self.chain_data = self.run(input_data, prefix, dim)
-        data = [d.get_diagram() for d in self.chain_data]
-        PersistenceData.__init__(self, input_data, data, name, title, prefix, dim)
-        self.current_dgm = None
-    def is_boundary(self, p):
-        return not all(self.bounds[0] < c < self.bounds[1] for c in p)
-    def get_boundary(self, P, F):
-        if self.delta > 0 or self.omega > 0:
-            Q = {i for i,p in enumerate(P) if self.is_boundary(p)}
-            return {i for i,s in enumerate(F) if all(v in Q for v in s) or s.data['alpha'] < self.omega}
-        return set()
+    def get_prefix(cls, *args, **kwargs):
+        return 'alpha'
+    # def __init__(self, *args, **kwargs):
+    #     MyPersistence.__init__(self, *args, **kwargs)
+    #     self.current_dgm, self.dual = None, None
     def __call__(self, P, dim):
         P.dtype = float
-        Fdio = dio.Filtration(diode.fill_alpha_shapes(P))
-        K = DioComplex(Fdio, 'alpha', dim)
+        K = AlphaComplex(P, 'alpha')
         F = Filtration(K, 'alpha')
         R = self.get_boundary(P, F)
-        return phcol(F, R)
-    def plot(self, frame, *args, **kwargs):
-        res = PersistenceData.plot(self, frame, *args, **kwargs)
-        self.current_dgm = self.chain_data[frame]
-        return res
+        return Diagram(F, R, self.coh)
+    # def plot(self, frame, *args, **kwargs):
+    #     res = PersistenceData.plot(self, frame, *args, **kwargs)
+    #     self.current_dgm = self.chain_data[frame]
+    #     # self.dual = VoronoiDual(self.input_data[frame], self.current_dgm.F, self.current_dgm.R)
+    #     return res
+
+class VoronoiPersistence(MyPersistence):
+    args = ['dim', 'delta', 'omega', 'coh']
+    @classmethod
+    def get_prefix(cls, *args, **kwargs):
+        return 'dual'
+    # def __init__(self, *args, **kwargs):
+    #     PersistenceData.__init__(self, *args, **kwargs)
+    #     self.current_dgm, self.dual = None, None
+    def __call__(self, P, dim):
+        P.dtype = float
+        K = AlphaComplex(P, 'alpha')
+        F = Filtration(K, 'alpha')
+        L = DualComplex(K, 'alpha')
+        for i,p in enumerate(L.P):
+            for j,c in enumerate(p):
+                if c < BOUNDS[0]:
+                    L.P[i,j] = BOUNDS[0] # - (BOUNDS[1] - BOUNDS[0]) / 4
+                elif c > BOUNDS[1]:
+                    L.P[i,j] = BOUNDS[1] # * (1 + 1/4)
+        G = Filtration(L, 'alpha', True)
+        R = self.get_boundary(P, F)
+        S = {G.index(L(F[i])) for i in R}
+        return Diagram(G, S, self.coh)
+    # def plot(self, frame, *args, **kwargs):
+    #     res = PersistenceData.plot(self, frame, *args, **kwargs)
+    #     self.current_dgm = self.chain_data[frame]
+    #     # self.dual = VoronoiDual(self.input_data[frame], self.current_dgm.F, self.current_dgm.R)
+    #     return res
