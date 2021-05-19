@@ -75,10 +75,10 @@ class CoChain(BoundaryColumn):
         return CoChain(simplices, boundary)
 
 class Filtration:
-    def __init__(self, complex, key='max', reverse=False):#, test=lambda a,b: a < b):
-        self.complex, self.dim, self.n = complex, complex.dim, len(complex)
+    def __init__(self, K, key='max', reverse=False):#, test=lambda a,b: a < b):
+        self.K, self.dim, self.n = K, K.dim, len(K)
         self.key, self.reverse = key, reverse
-        self.sequence = sorted(complex.values(), key=self.forder)
+        self.sequence = sorted(K.values(), key=self.forder)
         self.imap = {s : i for i, s in enumerate(self.sequence)}
     def forder(self, s):
         return ((-1 if self.reverse else 1) * s.data[self.key], s)
@@ -92,7 +92,7 @@ class Filtration:
     def __call__(self, s):
         if isinstance(s, int):
             return self(self[s])
-        return self.complex.smap[s](self.key)
+        return self.K.smap[s](self.key)
     def index(self, s):
         return self.imap[s]
     def get_range(self, relative=set(), upper=np.inf, lower=-np.inf): # optimize: thresh/index map

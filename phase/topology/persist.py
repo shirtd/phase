@@ -27,6 +27,10 @@ class Diagram:
                     self[low] = i
         if self.coh:
             self.pairs, self.pmap = self.pmap, self.pairs
+    def is_relative(self, i):
+        if not isinstance(i, int):
+            i = self.F.index(i)
+        return i in self.R
     def items(self):
         return self.pairs.items()
     def keys(self):

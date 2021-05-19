@@ -61,12 +61,6 @@ class VoronoiPersistence(MyPersistence):
         K = AlphaComplex(P, 'alpha')
         F = Filtration(K, 'alpha')
         L = DualComplex(K, 'alpha')
-        for i,p in enumerate(L.P):
-            for j,c in enumerate(p):
-                if c < BOUNDS[0]:
-                    L.P[i,j] = BOUNDS[0] # - (BOUNDS[1] - BOUNDS[0]) / 4
-                elif c > BOUNDS[1]:
-                    L.P[i,j] = BOUNDS[1] # * (1 + 1/4)
         G = Filtration(L, 'alpha', True)
         R = self.get_boundary(P, F)
         S = {G.index(L(F[i])) for i in R}
