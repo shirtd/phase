@@ -1,5 +1,5 @@
-from phase.util import stuple
 from phase.topology.cells import Cell, CellComplex
+from phase.util import stuple
 
 from itertools import combinations
 from tqdm import tqdm

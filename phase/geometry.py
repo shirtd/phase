@@ -1,5 +1,6 @@
-import numpy as np
 import numpy.linalg as la
+import numpy as np
+
 
 def tet_circumcenter(T):
     alpha = np.array([[a[0], a[1], a[2], 1] for a in T])
@@ -7,17 +8,6 @@ def tet_circumcenter(T):
     Dy = np.array([[a[0]*a[0] + a[1]*a[1] + a[2]*a[2], a[0], a[2], 1] for a in T])
     Dz = np.array([[a[0]*a[0] + a[1]*a[1] + a[2]*a[2], a[0], a[1], 1] for a in T])
     return np.array([la.det(Dx), -1*la.det(Dy), la.det(Dz)]) / (2 * la.det(alpha))
-
-# def circumcenter(t):
-#     t = t.T
-#     f = np.array([( t[0,1] - t[0,0] ) ** 2 + ( t[1,1] - t[1,0] ) ** 2,
-#             ( t[0,2] - t[0,0] ) ** 2 + ( t[1,2] - t[1,0] ) ** 2])
-#     top = np.array([( t[1,2] - t[1,0] ) * f[0] - ( t[1,1] - t[1,0] ) * f[1],
-#                 - ( t[0,2] - t[0,0] ) * f[0] + ( t[0,1] - t[0,0] ) * f[1]])
-#     det  = (t[1,2]-t[1,0] ) * (t[0,1]-t[0,0]) - (t[1,1]-t[1,0]) * (t[0,2]-t[0,0])
-#     if det == 0: return None
-#     return np.array([t[0,0] + 0.5 * top[0] / det, t[1,0] + 0.5 * top[1] / det])
-
 
 def torus(r1=0.5, r2=1, n=64):
     r1, r2 = 0.5, 1

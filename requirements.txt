@@ -1,0 +1,11 @@
+diode
+matplotlib
+numpy
+PyQt5
+pyvista
+pyvistaqt
+QtPy
+ripser
+scipy
+tqdm
+vtk

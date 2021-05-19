@@ -1,4 +1,4 @@
-from phase.base import PersistenceData, MyPersistence, BOUNDS
+from phase.base import PersistenceData, MyPersistence#, BOUNDS
 from phase.util import format_float
 
 from phase.topology.cells import DualComplex
@@ -7,16 +7,16 @@ from phase.topology.chains import Filtration
 from phase.topology.persist import Diagram
 
 from phase.plot.pyv import PYVPlot, ChainPlot
-from phase.plot.mpl import PersistencePlot
-from phase.plot.interact import Interact
+# from phase.plot.mpl import PersistencePlot
+# from phase.plot.interact import Interact
 
-from phase.duality import VoronoiDual
+# from phase.duality import VoronoiDual
 
 from ripser import ripser
 import numpy.linalg as la
-import dionysus as dio
+# import dionysus as dio
 import numpy as np
-import diode
+# import diode
 
 
 class RipsPersistence(PersistenceData):

@@ -2,6 +2,10 @@ from phase.plot.util import plot_diagrams
 
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib
+
+matplotlib.use('Qt5Agg')
+
 
 class MPLPlot:
     COLORS = plt.rcParams["axes.prop_cycle"].by_key()["color"]

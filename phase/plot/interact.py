@@ -4,13 +4,13 @@ from phase.stats import PersHisto
 from phase.data import BOUNDS
 from functools import partial
 
-from phase.topology.util import fill_birth, fill_death, _fill_death
+from phase.topology.util import fill_birth, fill_death
 from phase.topology.cells import DualComplex
 
 import numpy.linalg as la
 import numpy as np
-import time
-import sys
+import time, sys
+
 
 COLORS = { 'points' : 'white',
             'edges' : '#f7f7f7',#'#386cb0',#'#8da0cb',#'#a6cee3',#'#f7f7f7',#'#ece7f2',

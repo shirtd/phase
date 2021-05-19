@@ -1,7 +1,9 @@
 from phase.util import stuple, to_path
 from phase.geometry import tet_circumcenter
+
 from tqdm import tqdm
 import numpy as np
+
 
 class Cell(tuple):
     def __new__(cls, vertices, *args, **kwargs):

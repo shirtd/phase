@@ -1,9 +1,7 @@
-# from phase.base import *
-
 import pickle as pkl
 import numpy as np
 import sys, os
-import click
+
 
 DIR = os.path.join('data')
 DATA = {'lennard-jones' : ['melt.xyz'], # , 'thermo.dat'],
@@ -12,6 +10,7 @@ DATA = {'lennard-jones' : ['melt.xyz'], # , 'thermo.dat'],
 DATASET = 'lennard-jones' # 'water-first-order' # 'water-glass' #
 LOGFILE = 'melt.xyz' # 'ih_hda.xyz' # 'traj.xyz' #
 BOUNDS = (0, 8)
+
 
 def parse_line(line):
     l = line.replace('\n', '').split()

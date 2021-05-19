@@ -1,19 +1,18 @@
 from phase.args import parser
-# from phase.data import *
 from phase.base import InputData
-from phase.tda import *
-from phase.tpers import *
-from phase.topology.chains import Chain
-from phase.plot.interact import *
+from phase.tpers import TPers
+from phase.tda import RipsPersistence, \
+                        AlphaPersistence, \
+                        VoronoiPersistence
+from phase.plot.interact import TPersInteract, \
+                                AlphaPersistenceInteract, \
+                                VoronoiPersistenceInteract
 
-from phase.plot.util import plot_diagrams
+from phase.plot.mpl import plt
 
 import pickle as pkl
 import os, sys
 
-
-
-# plt.ion()
 
 def try_cache(cls, input_args, *args, **kwargs):
     kwargs = {**{a : getattr(input_args, a) for a in cls.args}, **kwargs}
@@ -43,6 +42,7 @@ def pers_interact_cls(args):
         else VoronoiPersistenceInteract if args.dual
         else AlphaPersistenceInteract)
 
+
 if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == 'wrap':
         IPYTHON = True
@@ -50,11 +50,6 @@ if __name__ == '__main__':
     else:
         IPYTHON = False
         args = parser.parse_args()
-    # args = parser.parse_args('--interact --force persist'.split())
-    # args = parser.parse_args('--interact --delta 1 --coh --force persist'.split())
-    # args = parser.parse_args('--interact --delta 1 --dual --coh'.split())
-    # args = parser.parse_args('--interact --delta 1 --frames 30000 30100 --coh'.split())
-    # args = parser.parse_args('--interact --delta 1 --histo birth --coh'.split())
 
     input_data = try_cache(InputData, args)
     pers_data = try_cache(pers_cls(args), args, input_data)
@@ -63,7 +58,10 @@ if __name__ == '__main__':
     if args.interact:
         pers_interact = pers_interact_cls(args)(pers_data)
         tpers_interact = TPersInteract(tpers, pers_interact, args.histo)
+    elif args.show:
+        tpers.plot()
 
     if (args.show or args.interact) and not IPYTHON:
+
         plt.show(block=False)
         input('[ Exit ]')

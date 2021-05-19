@@ -1,10 +1,12 @@
-import matplotlib.pyplot as plt
 from phase.topology.util import get_lim
+
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 
 # import pyvista
 # import pyvistaqt as pvqt
+
 
 def init_diagram(axis, lim):
     axis.plot([0, 1.2*lim], [0,1.2*lim], c='black', alpha=0.5, zorder=1)

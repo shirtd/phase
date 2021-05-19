@@ -3,6 +3,7 @@ from phase.util import diff, identity
 from tqdm import tqdm
 import numpy as np
 
+
 class Diagram:
     def __init__(self, F, R=set(), coh=False, upper=np.inf, lower=-np.inf, clearing=False):
         self.F, self.R, self.coh, self.thresh = F, R, coh, (lower, upper)
@@ -74,25 +75,3 @@ class Diagram:
         for i in self.unpairs:
             dgms[self.F[i].dim] = np.vstack((dgms[self.F[i].dim], self(i)))
         return dgms
-
-
-# def phcol(F, R=set(), upper=np.inf, lower=-np.inf):
-#     rng = F.get_range(R, upper, lower)
-#     D = F.get_boundary(rng)
-#     dgm = Diagram(F, D, R)
-#     for i in rng:
-#         low = dgm.try_pair(i, R)
-#         dgm.add_pair(low, i)
-#     return dgm
-#
-# def pcoh(F, R=set(), upper=np.inf, lower=-np.inf):
-#     _rng = F.get_range(R, upper, lower)
-#     D = F.get_coboundary(_rng)
-#     dgm = Diagram(F, D, R, True)
-#     for dim in range(F.dim+1):
-#         rng = [i for i in _rng if F[i].dim == dim and not i in dgm.pairs]
-#         for i in reversed(rng):
-#             low = dgm.try_pair(i, R)
-#             dgm.add_pair(low, i)
-#     dgm.pairs, dgm.pmap = dgm.pmap, dgm.pairs
-#     return dgm

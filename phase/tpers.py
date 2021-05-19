@@ -1,7 +1,7 @@
 from phase.base import Data
 
 from phase.plot.mpl import TimeSeriesPlot, plt
-from phase.plot.interact import Interact
+# from phase.plot.interact import Interact
 
 import numpy as np
 

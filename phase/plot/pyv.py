@@ -1,16 +1,17 @@
 from phase.util import stuple
 
-
 import pyvistaqt as pvqt
 import pyvista
 
 from itertools import combinations
 import numpy as np
 
+
 DEFAULT = {'point' : {'radius' : 0.04, 'color' : 'white'},
             'line' : {'radius' : 0.02, 'color' : 'white', 'smooth_shading' : True},
             'surface' : {'color' : '#1E88E5', 'opacity' : 0.7},
             'solid' : {'color' : '#1E88E5', 'opacity' : 1}}
+
 
 class PYVPlot:
     def __init__(self, bounds=(0,8)):
