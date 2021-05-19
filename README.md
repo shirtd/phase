@@ -32,6 +32,7 @@ Running
     python main.py --show
 
 will run the program (or load the data) with the default parameters and plot the total persistence curve.
+
 **TODO** `--save` option.
 
 ## Interaction
@@ -49,6 +50,8 @@ Pressing the right and left arrow keys (with the TPers plot selected) will plot 
 Pressing `t` will enable a point trajectory trace starting at the currently selected frame.
 Moving to another frame (either using arrow keys or clicking on the TPers plot) will plot the trajectory of each point in the simulation between the selected and starting frames.
 Pressing `t` again will disable trajectory tracing.
+
+**TODO** `--nocomplex` and `--nodiagram` options.
 
 #### Diagram Interaction
 

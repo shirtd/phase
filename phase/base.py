@@ -1,12 +1,12 @@
 from phase.data import BOUNDS, parse_file
-from phase.util import format_float
+from phase.util import format_float, pmap
 
 from phase.plot.mpl import PersistencePlot
 from phase.plot.pyv import PYVPlot
 
 from tqdm import tqdm
 import numpy as np
-import os
+import os, time
 
 
 class Data:
@@ -63,6 +63,7 @@ class InputData(MetricData):
         data = np.stack([np.array(d['points']) for d in input_data[frames[0]:frames[1]]])
         MetricData.__init__(self, data, name, title, prefix)
 
+
 class PersistenceData(Data, PersistencePlot):
     module = 'persist'
     args = []
@@ -75,9 +76,11 @@ class PersistenceData(Data, PersistencePlot):
         pass
     def run(self, input_data, prefix, *args, **kwargs):
         return [self(d, *args, **kwargs) for d in tqdm(input_data, total=len(input_data), desc='[ %s persistence' % prefix)]
+    def prun(self, input_data, *args, **kwargs):
+        return pmap(self.__call__, input_data, *args, **kwargs)
 
-class MyPersistence(PersistenceData):
-    args = ['dim', 'delta', 'omega', 'coh']
+class MyPersistenceBase(PersistenceData):
+    args = ['dim', 'delta', 'omega', 'coh', 'threads']
     @classmethod
     def get_name(cls, input_data, delta, omega, coh,  *args, **kwargs):
         name = '%s_%s' % (input_data.name, cls.get_prefix())
@@ -98,14 +101,18 @@ class MyPersistence(PersistenceData):
         if coh:
             title += '-coh'
         return title
-    def __init__(self, input_data, dim, delta, omega, coh):
+    def __init__(self, input_data, dim, delta, omega, coh, threads):
         name = self.get_name(input_data, delta, omega, coh)
         title = self.get_title(input_data, delta, omega, coh)
         prefix = self.get_prefix(delta, omega, coh)
         self.delta, self.omega, self.coh = delta, omega, coh
         self.bounds = (BOUNDS[0]+delta, BOUNDS[1]-delta)
-        self.chain_data = self.run(input_data, prefix, input_data.data.shape[-1])
-        data = [d.get_diagram() for d in self.chain_data]
+        if threads is None:
+            data = self.run(input_data, prefix, input_data.data.shape[-1])
+        else:
+            t0 = time.time()
+            data = self.prun(input_data, dim=input_data.data.shape[-1])#dim+1)
+            print('[ %s persistence in %0.4fs' % (prefix, time.time() - t0))
         PersistenceData.__init__(self, input_data, data, name, title, prefix, dim)
     def is_boundary(self, p):
         return not all(self.bounds[0] < c < self.bounds[1] for c in p)
@@ -114,3 +121,11 @@ class MyPersistence(PersistenceData):
             Q = {i for i,p in enumerate(P) if self.is_boundary(p)}
             return {i for i,s in enumerate(F) if all(v in Q for v in s) or s.data['alpha'] < self.omega}
         return set()
+    def prun(self, input_data, **kwargs):
+        return pmap(self, input_data, **kwargs)
+
+
+class MyPersistence(MyPersistenceBase):
+    def run(self, *args, **kwargs):
+        self.chain_data = MyPersistenceBase.run(self, *args, **kwargs)
+        return [d.get_diagram() for d in self.chain_data]

@@ -1,6 +1,7 @@
 from phase.util import stuple, to_path
 from phase.geometry import tet_circumcenter
 
+from functools import reduce
 from tqdm import tqdm
 import numpy as np
 
@@ -31,7 +32,18 @@ class CellComplex:
     def __init__(self, dim):
         self.dim = dim
         self.cells = {d : set() for d in range(dim+1)}
-        self.smap = {} # map tuples to Simplex objects
+        self.smap = {}
+    # def get_sequence(self, key, dim, reverse=False):
+    #     r = -1 if reverse else 1
+    #     if dim < self.dim:
+    #         S = [self[dim] for dim in range(dim+1)]
+    #         values = reduce(lambda a,b: a + list(b), S, [])
+    #     else:
+    #         values = self.values()
+    #     return sorted(values, key=lambda s: (r * s.data[key], s))
+    def get_sequence(self, key, reverse=False):
+        r = -1 if reverse else 1
+        return sorted(self.values(), key=lambda s: (r * s.data[key], s))
     def items(self):
         yield from self.cells.items()
     def keys(self):

@@ -2,9 +2,10 @@ from phase.args import parser
 from phase.base import InputData
 from phase.tpers import TPers
 from phase.tda import RipsPersistence, \
-                        AlphaPersistence, \
-                        VoronoiPersistence
+                        AlphaPersistence, AlphaPersistenceBase, \
+                        VoronoiPersistence, VoronoiPersistenceBase
 from phase.plot.interact import TPersInteract, \
+                                TPersInteractBase, \
                                 AlphaPersistenceInteract, \
                                 VoronoiPersistenceInteract
 
@@ -33,15 +34,18 @@ def try_cache(cls, input_args, *args, **kwargs):
     return dat
 
 def pers_cls(args):
-    return (RipsPersistence if args.rips
-        else VoronoiPersistence if args.dual
+    if args.rips:
+        return RipsPersistence
+    elif args.base:
+        return (VoronoiPersistenceBase if args.dual
+            else AlphaPersistenceBase)
+    return (VoronoiPersistence if args.dual
         else AlphaPersistence)
 
 def pers_interact_cls(args):
     return (None if args.rips
         else VoronoiPersistenceInteract if args.dual
         else AlphaPersistenceInteract)
-
 
 if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == 'wrap':
@@ -56,12 +60,14 @@ if __name__ == '__main__':
     tpers = TPers(pers_data, **{a : getattr(args, a) for a in TPers.args})
 
     if args.interact:
-        pers_interact = pers_interact_cls(args)(pers_data)
-        tpers_interact = TPersInteract(tpers, pers_interact, args.histo)
+        if args.base:
+            tpers_interact = TPersInteractBase(tpers, args.histo)
+        else:
+            pers_interact = pers_interact_cls(args)(pers_data)
+            tpers_interact = TPersInteract(tpers, pers_interact, args.histo)
     elif args.show:
         tpers.plot()
+        plt.show(block=False)
 
     if (args.show or args.interact) and not IPYTHON:
-
-        plt.show(block=False)
         input('[ Exit ]')

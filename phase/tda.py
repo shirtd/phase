@@ -1,22 +1,16 @@
-from phase.base import PersistenceData, MyPersistence#, BOUNDS
+from phase.base import PersistenceData, MyPersistenceBase, MyPersistence#, BOUNDS
 from phase.util import format_float
 
 from phase.topology.cells import DualComplex
 from phase.topology.simplicial import AlphaComplex
-from phase.topology.chains import Filtration
-from phase.topology.persist import Diagram
+from phase.topology.chains import BoundaryMatrix, Filtration
+from phase.topology.persist import DiagramBase, Diagram
 
 from phase.plot.pyv import PYVPlot, ChainPlot
-# from phase.plot.mpl import PersistencePlot
-# from phase.plot.interact import Interact
-
-# from phase.duality import VoronoiDual
 
 from ripser import ripser
 import numpy.linalg as la
-# import dionysus as dio
 import numpy as np
-# import diode
 
 
 class RipsPersistence(PersistenceData):
@@ -39,6 +33,34 @@ class RipsPersistence(PersistenceData):
     def __call__(self, d, dim, thresh):
         return ripser(d, dim, thresh)['dgms']
 
+class AlphaPersistenceBase(MyPersistenceBase):
+    @classmethod
+    def get_prefix(cls, *args, **kwargs):
+        return 'base-alpha'
+    def __call__(self, P, dim):
+        P.dtype = float
+        K = AlphaComplex(P, 'alpha')
+        F = BoundaryMatrix(K.get_sequence('alpha'),dim)#, dim), dim)
+        R = self.get_boundary(P, F)
+        dgm = DiagramBase(F.get_range(R), self.coh)
+        dgm._clearing_reduce(F, R)
+        return dgm.get_diagram(F, 'alpha', False)
+
+class VoronoiPersistenceBase(MyPersistenceBase):
+    @classmethod
+    def get_prefix(cls, *args, **kwargs):
+        return 'base-dual'
+    def __call__(self, P, dim):
+        P.dtype = float
+        K = AlphaComplex(P, 'alpha')
+        L = DualComplex(K, 'alpha')
+        F = BoundaryMatrix(K.get_sequence('alpha'), dim)#, P.shape[-1]), P.shape[-1])
+        G = BoundaryMatrix(L.get_sequence('alpha', True), dim)#, dim, True), dim)
+        R = self.get_boundary(P, F)
+        S = {G.index(L(F[i])) for i in R}# if L(F[i]).dim <= dim}
+        dgm = DiagramBase(G.get_range(S), self.coh)
+        dgm._clearing_reduce(G, S)
+        return dgm.get_diagram(G, 'alpha', True)
 
 class AlphaPersistence(MyPersistence):
     @classmethod
@@ -52,7 +74,6 @@ class AlphaPersistence(MyPersistence):
         return Diagram(F, R, self.coh)
 
 class VoronoiPersistence(MyPersistence):
-    args = ['dim', 'delta', 'omega', 'coh']
     @classmethod
     def get_prefix(cls, *args, **kwargs):
         return 'dual'
@@ -63,5 +84,5 @@ class VoronoiPersistence(MyPersistence):
         L = DualComplex(K, 'alpha')
         G = Filtration(L, 'alpha', True)
         R = self.get_boundary(P, F)
-        S = {G.index(L(F[i])) for i in R}
+        S = {G.index(L(F[i])) for i in R}# if L(F[i]).dim <= dim}
         return Diagram(G, S, self.coh)

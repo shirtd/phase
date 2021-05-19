@@ -80,29 +80,24 @@ class Interact:
     def plot_prev(self):
         pass
 
-class TPersInteract(Interact):
-    def __init__(self, data, sub=None, value='tpers'):
+class TPersInteractBase(Interact):
+    def __init__(self, data, value):
         Interact.__init__(self, data)
         self.histo = PersHisto(data, value) if value is not None else None
-        self.trace_start = None
-        self.sub = sub
         self.data.plot()
         plt.show(block=False)
         self.connect()
-        # self.run()
         self.plot_frame(0)
+    def plot_sub(self, frame):
+        self.data.input_data.plot(frame, self.data.lim)
+    def plot_histo(self, frame):
+        if self.histo is not None:
+            self.histo(frame, self.data.input_data[frame])
     def plot_frame(self, frame):
         if frame < len(self.data):
             self.last_frame = frame
-            if self.sub is None:
-                self.data.input_data.plot(frame, self.data.lim)
-            else:
-                self.sub.plot(frame, self.data.lim, self.data)
-                if self.trace_start is not None:
-                    self.sub.plot_trace(self.trace_start, frame)
-                # self.histo(frame, self.sub.active_dgm)
-            if self.histo is not None:
-                self.histo(frame, self.data.input_data[frame])
+            self.plot_sub(frame)
+            self.plot_histo(frame)
             self.plot_current(frame)
             plt.show(block=False)
         else:
@@ -121,6 +116,15 @@ class TPersInteract(Interact):
         return (self.last_frame+1) % len(self.data)
     def get_prev(self):
         return (self.last_frame-1) % len(self.data)
+
+class TPersInteract(TPersInteractBase):
+    def __init__(self, data, sub=None, value='tpers'):
+        self.sub, self.trace_start = sub, None
+        TPersInteractBase.__init__(self, data, value)
+    def plot_sub(self, frame):
+        self.sub.plot(frame, self.data.lim, self.data)
+        if self.trace_start is not None:
+            self.sub.plot_trace(self.trace_start, frame)
     def onpress(self, event):
         if self.sub is not None and event.key == 't':
             if self.trace_start is not None:
@@ -224,7 +228,6 @@ class MyPersistenceChainPlot(ChainPlot):
             for dim in args:
                 opts[toggle][dim] = not opts[toggle][dim] if force is None else force
                 self.plot_complex(opts, cfg)
-
     def get_simplices(self, pd, dim):
         if pd == 'primal':
             Kd = self.dgm.F.K[dim]
@@ -335,107 +338,3 @@ class VoronoiPersistenceInteract(MyPersistenceInteract):
         self.dual = self.dgm.F.K.K
     def get_dual(self, s):
         return self.dgm.F.K.pmap[s]
-
-    # def toggle(self, opt):
-    #     self.options[opt] = not self.options[opt]
-    #     self.plot_rep(self.last_frame)
-    # def plot_cloud(self, force=False):
-    #     if 'points' in self.elements and not force:
-    #         self.remove('points')
-    #     elif self.dualized:
-    #         self.plot_points(self.dual.P, 'points', **KWARGS['dual'])
-    #     else:
-    #         self.plot_points(self.get_points(), 'points', **KWARGS['points'])
-    # def plot_cells(self, dim, force=False, **kwargs):
-    #     key = 'K%d' % dim
-    #     if key in self.elements and not force:
-    #         self.remove(key)
-    #     else:
-    #         S = [s for s in self.dgm.F.K[dim] if not self.dgm.is_relative(s)]
-    #         self.plot_chain(S, dim, key, **kwargs)
-    # def plot_rep(self, i):
-    #     s = self.get_simplex(i)
-    #     if self.dualized:
-    #         B, D = self.get_dual(i)
-    #         bdim = self.dgm.F.dim - s.dim
-    #         ddim = bdim - 1
-    #         K = self.dual
-    #     else:
-    #         B = self.dgm.D[i]
-    #         D = fill_death(self.dgm, i) if self.filled else self.dgm.D[self.dgm[i]]
-    #         bdim, ddim = s.dim, self.get_simplex(self.dgm[i]).dim
-    #         K = self.dgm.F.K
-    #     self.plot_chain(B, bdim, 'birth', K, **KWARGS['birth'])
-    #     self.plot_chain(D, ddim, 'death', K, **KWARGS['death'])
-    #     # self.plot_cycle(i, 'birth', **KWARGS['birth'])
-    #     # self.plot_cycle(self[i], 'death', **KWARGS['death'])
-    # # def plot_rep(self, i):
-    # #     self.dualized = False
-    # #     self.filled = False
-    # #     # self.plot_cloud()
-    # #     self.plot_cycle(i, 'birth', **KWARGS['birth'])
-    # #     self.plot_cycle(self[i], 'death', **KWARGS['death'])
-    # # def fill_birth_cycle(self):
-    # #     self.fill_birth = not self.fill_birth
-    # #     self.pre_death = not self.pre_death
-    # #     # self.filled = True
-    # #     # if self.dualized:
-    # #     #     return self.plot_dual(True)
-    # #     return self.fill_cycle(True)
-    # # def plot_all(self, dim):
-    # #     sorted_births = [b for b in self.sorted_births if self.dgm.F[b].dim == dim]
-    # #     if len(sorted_births):
-    # #         B = self.dgm.D[sorted_births[0]]
-    # #         D, added = _fill_death(self.dgm, sorted_births[0])
-    # #         for b in sorted_births[1:]:
-    # #             if not b in added:
-    # #                 B = B + self.dgm.D[b]
-    # #                 _D, _added = _fill_death(self.dgm, b)
-    # #                 D = D + _D
-    # #                 added = added.union(_added)
-    # #         ddim = dim + 1
-    # #         B = [s for s in B if not self.dgm.F.index(s) in self.dgm.R]
-    # #         if len(B):
-    # #             self.plot_chain(self.get_points(), self.format_cycle(B, dim), dim, 'birth', **KWARGS['birth'])
-    # #         D = [s for s in D if not self.dgm.F.index(s) in self.dgm.R]
-    # #         if len(D):
-    # #             self.plot_chain(self.get_points(), self.format_cycle(D, ddim), ddim, 'death', **KWARGS['death'])
-    # # def fill_cycle(self, force=False):
-    # #     if self.last_frame is None:
-    # #         return
-    # #     if self.filled and not force:
-    # #         if self.dualized:
-    # #             self.filled = False
-    # #             return self.plot_dual(True)
-    # #         return self.plot_rep(self.last_frame)
-    # #     self.filled = True
-    # #     if self.dualized:
-    # #         return self.plot_dual(True)
-    # #     B = self.dgm.D[self.last_frame]
-    # #     D = fill_death(self.dgm, self.last_frame)
-    # #     bs = self.get_simplex(self.last_frame)
-    # #     ds = self.get_simplex(self[self.last_frame])
-    # #     # self.plot_cloud()
-    # #     self.plot_chain(self.get_points(), self.format_cycle(B, bs.dim), bs.dim, 'birth', **KWARGS['birth'])
-    # #     self.plot_chain(self.get_points(), self.format_cycle(D, ds.dim), ds.dim, 'death', **KWARGS['death'])
-    # # def plot_dual(self, force=False):
-    # #     if self.last_frame is None:
-    # #         return
-    # #     if self.dualized and not force:
-    # #         if self.filled:
-    # #             self.dualized = False
-    # #             if 'points' in self.elements:
-    # #                 self.plot_cloud(True)
-    # #             return self.fill_cycle(True)
-    # #         return self.plot_rep(self.last_frame)
-    # #     self.dualized = True
-    # #     s = self.get_simplex(self.last_frame)
-    # #     dB, dD = self.get_dual(self.last_frame)
-    # #     bdim = self.dgm.F.dim - s.dim
-    # #     ddim, P = bdim - 1, self.dual.P
-    # #     b = self.format_cycle(dB, bdim, self.dual)
-    # #     d = self.format_cycle(dD, ddim, self.dual)
-    # #     if 'points' in self.elements:
-    # #         self.plot_cloud(True)
-    # #     self.plot_chain(P, b, bdim, 'birth', **KWARGS['birth'])
-    # #     self.plot_chain(P, d, ddim, 'death', **KWARGS['death'])

@@ -35,7 +35,7 @@ def stuple(s, *args, **kw):
 
 def pmap(fun, x, *args, **kw):
 # def pmap(fun, x, max_cores=None, *args, **kw):
-    pool = Pool(max_cores)
+    pool = Pool()#max_cores)
     f = partial(fun, *args, **kw)
     try:
         y = pool.map(f, x)

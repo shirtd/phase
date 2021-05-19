@@ -12,8 +12,8 @@ def fill_birth(dgm, birth, pre=False):
     L = sorted(c, key=lambda s: dgm.F.index(s))
     for l in L:
         i = dgm.F.index(l)
-        if i in dgm.pmap:
-            D = dgm.D[dgm.pmap[i]]
+        if i in dgm.copairs:
+            D = dgm.D[dgm.copairs[i]]
             C = D if C is None else C + D
     return C
 
@@ -26,8 +26,8 @@ def fill_birth_coh(dgm, birth, C=None, pre=False, c=None):
     # diff = [dgm.F.index(s) for s in dgm.F.boundary(C) + fill_death_coh(dgm, birth) if not dgm.F.index(s) in dgm.R]
     if len(diff):
         p = min(diff)
-        if p in dgm.pmap:
-            return fill_birth_coh(dgm, birth, C + dgm.D[dgm.pmap[p]], pre, c)
+        if p in dgm.copairs:
+            return fill_birth_coh(dgm, birth, C + dgm.D[dgm.copairs[p]], pre, c)
     return C
 
 def fill_death(dgm, birth, C=None, pre=False, c=None):
