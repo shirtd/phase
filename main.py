@@ -1,9 +1,8 @@
 from phase.args import parser
 from phase.base import InputData
 from phase.tpers import TPers
-from phase.tda import RipsPersistence, \
-                        AlphaPersistence, AlphaPersistenceBase, \
-                        VoronoiPersistence, VoronoiPersistenceBase
+from phase.complexes import AlphaComplexData, VoronoiComplexData
+from phase.tda import Persistence, PersistenceReps
 from phase.plot.interact import TPersInteract, \
                                 TPersInteractBase, \
                                 AlphaPersistenceInteract, \
@@ -19,7 +18,8 @@ def try_cache(cls, input_args, *args, **kwargs):
     kwargs = {**{a : getattr(input_args, a) for a in cls.args}, **kwargs}
     name = cls.get_name(*args, **kwargs)
     fcache = os.path.join(input_args.cache, '%s.pkl' % name)
-    if not cls.module in input_args.force and os.path.exists(fcache):
+    if (not (input_args.nocache or cls.module in input_args.force)
+            and os.path.exists(fcache)):
         try:
             print('[ Loading %s' % fcache)
             with open(fcache, 'rb') as f:
@@ -27,24 +27,23 @@ def try_cache(cls, input_args, *args, **kwargs):
         except Exception as err:
             raise err
     dat = cls(*args, **kwargs)
-    if not os.path.exists(input_args.cache):
-        os.makedirs(input_args.cache)
-    with open(fcache, 'wb') as f:
-        pkl.dump(dat, f)
+    if not input_args.nocache:
+        if not os.path.exists(input_args.cache):
+            os.makedirs(input_args.cache)
+        with open(fcache, 'wb') as f:
+            pkl.dump(dat, f)
     return dat
 
+def complex_cls(args):
+    return (VoronoiComplexData if args.dual
+        else AlphaComplexData)
+
 def pers_cls(args):
-    if args.rips:
-        return RipsPersistence
-    elif args.base:
-        return (VoronoiPersistenceBase if args.dual
-            else AlphaPersistenceBase)
-    return (VoronoiPersistence if args.dual
-        else AlphaPersistence)
+    return (PersistenceReps if args.reps
+        else Persistence)
 
 def pers_interact_cls(args):
-    return (None if args.rips
-        else VoronoiPersistenceInteract if args.dual
+    return (VoronoiPersistenceInteract if args.dual
         else AlphaPersistenceInteract)
 
 if __name__ == '__main__':
@@ -56,18 +55,34 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
     input_data = try_cache(InputData, args)
-    pers_data = try_cache(pers_cls(args), args, input_data)
-    tpers = TPers(pers_data, **{a : getattr(args, a) for a in TPers.args})
 
-    if args.interact:
-        if args.base:
-            tpers_interact = TPersInteractBase(tpers, args.histo)
-        else:
-            pers_interact = pers_interact_cls(args)(pers_data)
-            tpers_interact = TPersInteract(tpers, pers_interact, args.histo)
-    elif args.show:
-        tpers.plot()
-        plt.show(block=False)
+    if args.skip:
+        comp, pers = complex_cls(args), pers_cls(args)
+        comp_kw = {a : getattr(args, a) for a in comp.args}
+        pers_kw = {a : getattr(args, a) for a in pers.args}
+        name = pers.make_name(comp.get_name(input_data, **comp_kw), **pers_kw)
+        fcache = os.path.join(args.cache, '%s.pkl' % name)
+        print('[ Loading %s' % fcache)
+        with open(fcache, 'rb') as f:
+            pers_data = pkl.load(f)
+    elif not args.nocomplex:
+        complex_data = try_cache(complex_cls(args), args, input_data)
+
+        if not args.nopers:
+            pers_data = try_cache(pers_cls(args), args, complex_data)
+
+    if (not args.nocomplex and not args.nopers) or args.skip:
+        tpers = TPers(pers_data, **{a : getattr(args, a) for a in TPers.args})
+
+        if args.interact:
+            if args.reps:
+                pers_interact = pers_interact_cls(args)(pers_data)
+                tpers_interact = TPersInteract(tpers, pers_interact, args.histo)
+            else:
+                tpers_interact = TPersInteractBase(tpers, args.histo)
+        elif args.show:
+            tpers.plot()
+            plt.show(block=False)
 
     if (args.show or args.interact) and not IPYTHON:
         input('[ Exit ]')

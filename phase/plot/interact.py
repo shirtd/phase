@@ -1,7 +1,6 @@
 from phase.plot.mpl import MPLPlot, plt
 from phase.plot.pyv import ChainPlot
 from phase.stats import PersHisto
-from phase.data import BOUNDS
 from functools import partial
 
 from phase.topology.util import fill_birth, fill_death
@@ -13,11 +12,11 @@ import time, sys
 
 
 COLORS = { 'points' : 'white',
-            'edges' : '#f7f7f7',#'#386cb0',#'#8da0cb',#'#a6cee3',#'#f7f7f7',#'#ece7f2',
-            'faces' : '#f4a582',#'#fb9a99',#'#f4a582',#'#2b8cbe',
+            'edges' : '#f7f7f7',
+            'faces' : '#f4a582',
             'dual' : 'black',
-            'primal birth' : '#1a9641',#'#0571b0',#'#b2df8a', #'#4daf4a',
-            'primal death' : '#ca0020',#'#fb9a99'}#'#e41a1c'}
+            'primal birth' : '#1a9641',
+            'primal death' : '#ca0020',
             'dual birth' : '#0571b0',
             'dual death' : '#e66101'}
 
@@ -36,7 +35,6 @@ class Interact:
         self.data = data
         self.cids, self.cur_frame_plt = {}, []
         self.last_frame, self.press_time = -1, None
-        # self.run()
     def connect(self):
         self.cids['button_press_event'] = self.data.figure.canvas.mpl_connect('button_press_event', self.onclick)
         self.cids['button_release_event'] = self.data.figure.canvas.mpl_connect('button_release_event', self.onrelease)
@@ -140,7 +138,7 @@ class TPersInteract(TPersInteractBase):
 
 class MyPersistenceChainPlot(ChainPlot):
     def __init__(self, data):
-        ChainPlot.__init__(self, data)
+        ChainPlot.__init__(self, data, data.bounds.max(0))
         self.data.init_fig()
         self.dual = None
         self.dgm = None
@@ -198,8 +196,8 @@ class MyPersistenceChainPlot(ChainPlot):
             E = []
             for i in range(n):
                 for k in range(1, len(Ps)):
-                    if (not (self.data.is_boundary(Ps[k-1][i])
-                            or self.data.is_boundary(Ps[k][i]))):
+                    if (not (self.data.is_boundary(a+k-1, Ps[k-1][i])
+                            or self.data.is_boundary(a+k, Ps[k][i]))):
                         E.append([i + (k-1)*n, i + k*n])
             self.plot_curves(np.vstack(Ps), E, 'trace', **self.config['trace']['primal'])
     def init_fig(self):
@@ -211,10 +209,8 @@ class MyPersistenceChainPlot(ChainPlot):
         fig.add_key_event('i', fig.isometric_view)
         return fig
     def reset_view(self):
-        l = (BOUNDS[1] - BOUNDS[0]) / 2
-        self.figure.camera_position = [(30,l,l), (l,l,l), (0,0,1)]
-        self.figure.camera_position = [(l*l,l*l,l*l), (l,l,l), (0,0,1)]
-        # self.figure.isometric_view()
+        center = self.bounds / 2
+        self.figure.camera_position = [(center[0] * 10, center[1], center[2]), center, (0, 0, 1)]
         self.figure.camera_set = True
     def reset(self):
         self.remove(keep={'trace'})

@@ -14,7 +14,7 @@ DEFAULT = {'point' : {'radius' : 0.04, 'color' : 'white'},
 
 
 class PYVPlot:
-    def __init__(self, bounds=(0,8)):
+    def __init__(self, bounds):
         self.figure = None
         self.elements = {}
         self.actors = {}
@@ -51,7 +51,7 @@ class PYVPlot:
             del self.elements[key]
             del self.actors[key]
     def plot_points(self, points, key, radius=DEFAULT['point']['radius'], **kwargs):
-        points = np.array([p for p in points if all(self.bounds[0] <= c <= self.bounds[1] for c in p)])
+        points = np.array([p for p in points if all(0 <= c <= l for l,c in zip(self.bounds, p))])
         element = pyvista.PolyData(points).glyph(scale=False, geom=pyvista.Sphere(radius=radius))
         kwargs = {**{'color' : DEFAULT['point']['color']}, **kwargs}
         return self.add_element(element, key, **kwargs)
@@ -77,8 +77,8 @@ class PYVPlot:
         return self.add_element(element, key, **kwargs)
 
 class ChainPlot(PYVPlot):
-    def __init__(self, data):
-        PYVPlot.__init__(self)
+    def __init__(self, data, bounds):
+        PYVPlot.__init__(self, bounds)
         self.data = data
         self.dgm = None
     def __getitem__(self, i):
@@ -91,13 +91,6 @@ class ChainPlot(PYVPlot):
         if idx is None:
             return self.dgm.F.K.P
         return self.dgm.F.K.P[idx]
-    # def get_cycle(self, i):
-    #     return self.format_cycle(self.dgm.D[i].simplices, self.get_simplex(i).dim)
-    # def get_boundary(self, i):
-    #     C = [self.get_simplex(l) for l in self.dgm.D[i].boundary]
-    #     return self.format_cycle(C, self.get_simplex(i).dim-1)
-    # def plot_cycle(self, i, key, **kwargs):
-    #     return self.plot_chain(self.get_points(), self.get_cycle(i), self.get_simplex(i).dim, key, **kwargs)
     def format_cycle(self, C, dim, K=None):
         K = self.dgm.F.K if K is None else K
         return ([v for s in C for v in s] if dim == 0

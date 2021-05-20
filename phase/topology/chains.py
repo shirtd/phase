@@ -77,8 +77,9 @@ class CoChain(Column, CoBoundary):
         return 'CoChain(%s)' % '+'.join([str(s) for s in self])
 
 class BoundaryMatrix:
-    def __init__(self, sequence, dim):
-        self.sequence, self.dim = sequence, dim
+    def __init__(self, K, key, reverse):
+        self.sequence = K.get_sequence(key, reverse)
+        self.dim, self.key, self.reverse = K.dim, key, reverse
         self.imap = {s : i for i, s in enumerate(self)}
     def __len__(self):
         return len(self.sequence)
@@ -110,8 +111,8 @@ class BoundaryMatrix:
 
 class Filtration(BoundaryMatrix):
     def __init__(self, K, key='max', reverse=False):
-        self.K, self.key, self.reverse = K, key, reverse
-        BoundaryMatrix.__init__(self, K.get_sequence(key, reverse), K.dim)
+        BoundaryMatrix.__init__(self, K, key, reverse)
+        self.K = K
     def __call__(self, s):
         if isinstance(s, int):
             return self(self[s])

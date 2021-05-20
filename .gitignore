@@ -2,7 +2,6 @@
 *.pkl
 *.stash
 cache
-cache-bak
 data
 *__pycache__
 
@@ -11,3 +10,5 @@ ubl_data.py
 duals.py
 zigzag.py
 phase/duality.py
+*-bak*
+*.bak

@@ -1,8 +1,5 @@
-from phase.data import BOUNDS, parse_file
+from phase.data import parse_file, get_bounds
 from phase.util import format_float, pmap
-
-from phase.plot.mpl import PersistencePlot
-from phase.plot.pyv import PYVPlot
 
 from tqdm import tqdm
 import numpy as np
@@ -10,11 +7,12 @@ import os, time
 
 
 class Data:
-    module = 'input'
-    args = []
-    def __init__(self, data, name, title, prefix, features):
-        self.data, self.features = data, features
-        self.name, self.title, self.prefix = name, title, prefix
+    module, args = None, []
+    def __init__(self, data, bounds, *args, **kwargs):
+        self.data, self.bounds = data, bounds
+        self.prefix = self.get_prefix(*args, **kwargs)
+        self.name = self.get_name(*args, **kwargs)
+        self.title = self.get_title(*args, **kwargs)
     def __iter__(self):
         yield from self.data
     def __repr__(self):
@@ -25,14 +23,12 @@ class Data:
         return len(self.data)
 
 class MetricData(Data):
-    module = 'input'
-    args = []
-    def __init__(self, data, name, title, prefix):
-        features = ['Coord %d' % i for i in range(1,data.shape[-1]+1)]
-        Data.__init__(self, data, name, title, prefix, features)
-
+    def __init__(self, data, bounds, *args, **kwargs):
+        self.shape, self.dim = data.shape, data.shape[-1]
+        Data.__init__(self, data, bounds, *args, **kwargs)
 
 class InputData(MetricData):
+    module = 'input'
     args = ['directory', 'dataset', 'file', 'frames']
     @classmethod
     def get_prefix(cls, directory, dataset, file, frames):
@@ -55,77 +51,35 @@ class InputData(MetricData):
         self.directory, self.dataset, self.file = directory, dataset, file
         self.path = os.path.join(directory, dataset, file)
         print('[ Loading %s' % self.path)
-        input_data = parse_file(self.path)
-        prefix = self.get_prefix(directory, dataset, file, frames)
-        name = self.get_name(directory, dataset, file, frames)
-        title = self.get_title(directory, dataset, file, frames)
+        input_data = parse_file(self.path, frames)
         frames = frames if frames is not None else (0, len(input_data))
-        data = np.stack([np.array(d['points']) for d in input_data[frames[0]:frames[1]]])
-        MetricData.__init__(self, data, name, title, prefix)
+        data = np.stack([np.array(d['points']) for d in input_data])
+        bounds = get_bounds(input_data, dataset)
+        MetricData.__init__(self, data, bounds, directory, dataset, file, frames)
 
-
-class PersistenceData(Data, PersistencePlot):
-    module = 'persist'
-    args = []
-    def __init__(self, input_data, data, name, title, prefix, dim):
-        self.dim, self.input_data = dim, input_data
-        features = ['H%d' % d for d in range(dim+1)]
-        Data.__init__(self, data, name, title, prefix, features)
-        PersistencePlot.__init__(self)
-    def __call__(self, d, *args, **kwargs):
+class DataTransformation(Data):
+    args = ['parallel', 'verbose']
+    @classmethod
+    def get_prefix(cls, *args, **kwargs):
         pass
-    def run(self, input_data, prefix, *args, **kwargs):
-        return [self(d, *args, **kwargs) for d in tqdm(input_data, total=len(input_data), desc='[ %s persistence' % prefix)]
-    def prun(self, input_data, *args, **kwargs):
-        return pmap(self.__call__, input_data, *args, **kwargs)
-
-class MyPersistenceBase(PersistenceData):
-    args = ['dim', 'delta', 'omega', 'coh', 'threads']
     @classmethod
-    def get_name(cls, input_data, delta, omega, coh,  *args, **kwargs):
-        name = '%s_%s' % (input_data.name, cls.get_prefix())
-        if delta > 0 or omega > 0:
-            d = {'delta' : delta, 'omega' : omega}
-            s = ['%s%s' % (l,format_float(v)) for l,v in d.items() if v > 0]
-            name = '-'.join([name] + s)
-        if coh:
-            name += '-coh'
-        return name
+    def get_name(cls, input_data, *args, **kwargs):
+        return cls.make_name(input_data.name, *args, **kwargs)
     @classmethod
-    def get_title(cls, input_data, delta, omega, coh, *args, **kwargs):
-        title = '%s %s' % (input_data.title, cls.get_prefix())
-        if delta > 0 or omega > 0:
-            d = {'delta' : delta, 'omega' : omega}
-            s = ['%s=%g' % (l,v) for l,v in d.items() if v > 0]
-            title = '%s (%s)' % (title, ','.join(s))
-        if coh:
-            title += '-coh'
-        return title
-    def __init__(self, input_data, dim, delta, omega, coh, threads):
-        name = self.get_name(input_data, delta, omega, coh)
-        title = self.get_title(input_data, delta, omega, coh)
-        prefix = self.get_prefix(delta, omega, coh)
-        self.delta, self.omega, self.coh = delta, omega, coh
-        self.bounds = (BOUNDS[0]+delta, BOUNDS[1]-delta)
-        if threads is None:
-            data = self.run(input_data, prefix, input_data.data.shape[-1])
-        else:
-            t0 = time.time()
-            data = self.prun(input_data, dim=input_data.data.shape[-1])#dim+1)
-            print('[ %s persistence in %0.4fs' % (prefix, time.time() - t0))
-        PersistenceData.__init__(self, input_data, data, name, title, prefix, dim)
-    def is_boundary(self, p):
-        return not all(self.bounds[0] < c < self.bounds[1] for c in p)
-    def get_boundary(self, P, F):
-        if self.delta > 0 or self.omega > 0:
-            Q = {i for i,p in enumerate(P) if self.is_boundary(p)}
-            return {i for i,s in enumerate(F) if all(v in Q for v in s) or s.data['alpha'] < self.omega}
-        return set()
-    def prun(self, input_data, **kwargs):
-        return pmap(self, input_data, **kwargs)
-
-
-class MyPersistence(MyPersistenceBase):
-    def run(self, *args, **kwargs):
-        self.chain_data = MyPersistenceBase.run(self, *args, **kwargs)
-        return [d.get_diagram() for d in self.chain_data]
+    def get_title(cls, input_data, *args, **kwargs):
+        return cls.make_title(input_data.title, *args, **kwargs)
+    def __init__(self, input_data, parallel, verbose, *args, **kwargs):
+        # self.input_data = input_data
+        self.limits = input_data.bounds.min(0)
+        data = self.run(input_data, parallel, verbose, *args, **kwargs)
+        Data.__init__(self, data, input_data.bounds, input_data, *args, **kwargs)
+    def run(self, input_data, parallel, verbose, *args, **kwargs):
+        sstr = '[ %s %s' % (self.get_prefix(input_data, *args, **kwargs), self.module)
+        if parallel:
+            print(sstr, end='')
+            t0, data = time.time(), pmap(self, input_data, verbose)
+            print(' %0.4fs' % time.time() - t0)
+            return data
+        if not verbose:
+            input_data = tqdm(input_data, total=len(input_data), desc=sstr)
+        return [self(d, verbose) for d in input_data]

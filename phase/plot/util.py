@@ -4,9 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-# import pyvista
-# import pyvistaqt as pvqt
-
 
 def init_diagram(axis, lim):
     axis.plot([0, 1.2*lim], [0,1.2*lim], c='black', alpha=0.5, zorder=1)
@@ -25,9 +22,11 @@ def plot_diagrams(axis, dgms, lim=None, init=True):
     for dim, dgm in enumerate(dgms):
         if len(dgm):
             d = lim_dgm(dgm, lim)
-            elems += [axis.scatter(d[:,0], d[:,1], s=7, zorder=2, alpha=0.3, label='%dD' % dim)]
+            elems += [axis.scatter(d[:,0], d[:,1], s=7, zorder=2, alpha=0.3, label='H%d' % dim)]
         else:
-            elems += [axis.scatter([], [], s=7, zorder=2, alpha=0.3, label='%dD' % dim)]
+            elems += [axis.scatter([], [], s=7, zorder=2, alpha=0.3, label='H%d' % dim)]
+    if init:
+        axis.legend()
     return lim, elems
 
 def save_plot(dir, prefix, name, dpi=500):

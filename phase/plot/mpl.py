@@ -54,6 +54,9 @@ class PersistencePlot(MPLPlot):
         return fig, ax
 
 class TimeSeriesPlot(MPLPlot):
+    def __init__(self, features, *args, **kwargs):
+        self.features = features
+        MPLPlot.__init__(self, *args, **kwargs)
     def plot(self, plot_legend=True, make_title=True):
         fig, ax = self.clear_fig(close=True)
         for i, (d, v) in enumerate(zip(self.data.T, self.features)):

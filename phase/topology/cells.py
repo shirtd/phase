@@ -1,5 +1,6 @@
 from phase.util import stuple, to_path
 from phase.geometry import tet_circumcenter
+from phase.topology.chains import BoundaryMatrix, Filtration
 
 from functools import reduce
 from tqdm import tqdm
@@ -13,10 +14,14 @@ class Cell(tuple):
         tuple.__init__(self)
         self.dim, self.data = dim, kwargs
         self.faces, self.cofaces = [], []
-        if self.dim > 0:
-            for f in faces:
-                self.faces.append(tuple(f))
-                f.add_coface(self)
+        try:
+            if self.dim > 0:
+                for f in faces:
+                    self.faces.append(tuple(f))
+                    f.add_coface(self)
+        except TypeError as err:
+            print(vertices, list(faces))
+            raise err
     def add_coface(self, coface):
         self.cofaces.append(tuple(coface))
     def items(self):
@@ -58,6 +63,7 @@ class CellComplex:
         s = stuple(s)
         if s in self.smap:
             return self.smap[s]
+        # return s
     def __getitem__(self, s):
         return self.cells[s]
     def add(self, s):
@@ -78,20 +84,27 @@ class CellComplex:
     def orient_face(self, s):
         return s
     def add_new(self, s, faces, dim, **kwargs):
+        # if dim <= self.dim:
         return self.add(Cell(s, map(self, faces), dim, **kwargs))
 
 class DualComplex(CellComplex):
-    def __init__(self, K, key):
+    def __init__(self, K, key, verbose):
         CellComplex.__init__(self, K.dim)
         self.K, self.key = K, key
         T = sorted(K[3], key=lambda t: t.data[key], reverse=True)
         self.imap = {t : i for i,t in enumerate(T)}
         self.P = np.vstack([tet_circumcenter(K.P[list(t)]) for t in T])
         self.dmap, self.pmap = {}, {}
+        if verbose:
+            pbar = tqdm(total=len(self.K.values()), desc='[ dual complex')
         for dim in reversed(range(self.dim+1)):
             for s in K[dim]:
                 self.dmap[s] = self.add(self.get_dual(s))
                 self.pmap[self.dmap[s]] = s
+                if verbose:
+                    pbar.update(1)
+        if verbose:
+            pbar.close()
         self.nbrs = {i : set() for i,_ in enumerate(self[0])}
         for e in self[1]:
             if len(e) == 2:
@@ -111,3 +124,7 @@ class DualComplex(CellComplex):
         return {self.imap[s]}
     def orient_face(self, s):
         return to_path({v for v in s}, self.nbrs)
+    def get_filtration(self, delta, limits, cycle_reps=True):
+        F, R = self.K.get_filtration(self, delta, limits, cycle_reps)
+        G = (Filtration if cycle_reps else BoundaryMatrix)(self, self.key, True)
+        return G, {G.index(self(F[i])) for i in R}

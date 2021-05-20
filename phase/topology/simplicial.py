@@ -1,5 +1,7 @@
 from phase.topology.cells import Cell, CellComplex
-from phase.util import stuple
+from phase.topology.chains import BoundaryMatrix, Filtration
+from phase.util import stuple, is_boundary
+
 
 from itertools import combinations
 from tqdm import tqdm
@@ -21,16 +23,25 @@ class SimplicialComplex(CellComplex):
         return ''.join(['%d:\t%d simplices\n' % (d, len(S)) for d,S in self.items()])
     def add_new(self, s, faces=None, **kwargs):
         if faces is None:
-            faces = [tuple(s[:i]+s[i+1:]) for i in range(len(s))]
+            faces = [stuple(s[:i]+s[i+1:]) for i in range(len(s))]
         return self.add(Simplex(s, map(self, faces), **kwargs))
 
-
 class AlphaComplex(SimplicialComplex):
-    def __init__(self, P, key='alpha'):
+    def __init__(self, P, key='alpha', dim=None, verbose=False):
         self.P, self.key = P, key
-        SimplicialComplex.__init__(self, P.shape[1])
-        for s, f in diode.fill_alpha_shapes(P):
+        dim = P.shape[-1] if dim is None else dim
+        SimplicialComplex.__init__(self, dim)
+        A = diode.fill_alpha_shapes(P.astype(float), True)
+        for s, f in (tqdm(A, desc='[ alpha complex') if verbose else A):
             self.add_new(s, **{key : f})
+    def get_boundary(self, F, delta, limits):
+        if delta > 0:
+            Q = {i for i,p in enumerate(self.P) if is_boundary(p, delta, limits)}
+            return {i for i,s in enumerate(F) if all(v in Q for v in s)}
+        return set()
+    def get_filtration(self, delta, limits, cycle_reps=True):
+        F = (Filtration if cycle_reps else BoundaryMatrix)(self, self.key, False)
+        return F, self.get_boundary(F, delta, limits)
 
 class DioComplex(SimplicialComplex):
     def __init__(self, simplices, key, dim):

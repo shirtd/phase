@@ -1,7 +1,6 @@
 from phase.base import Data
 
 from phase.plot.mpl import TimeSeriesPlot, plt
-# from phase.plot.interact import Interact
 
 import numpy as np
 
@@ -21,14 +20,13 @@ class TPers(Data, TimeSeriesPlot):
     def get_title(cls, input_data, *args, **kwargs):
         return '%s TPers' % input_data.title
     def __init__(self, input_data, dim, pmin, pmax, bmin, bmax, dmin, dmax, average, count, lim):
-        name = self.get_name(input_data)
-        title = self.get_title(input_data)
-        prefix = self.get_prefix()
-        self.input_data, self.dim, self.lim = input_data, dim, lim
+        features =  ['H%d' % d for d in range(dim)]
+        self.input_data, self.dim = input_data, dim
+        self.lim = lim * input_data.limits.max()
         self.prng, self.brng, self.drng = (pmin, pmax), (bmin,bmax), (dmin,dmax)
         data = np.vstack([self(dgms, dim, average, count) for dgms in input_data])
-        Data.__init__(self, data, name, title, prefix, input_data.features[:dim+1])
-        TimeSeriesPlot.__init__(self, len(self.features)+1, 1, sharex=True, figsize=(12,8))
+        Data.__init__(self, data, input_data.bounds, input_data)
+        TimeSeriesPlot.__init__(self, features, dim+1, 1, sharex=True, figsize=(12,8))
     def inrng(self, p):
         return (self.prng[0] <= p[1] - p[0] < self.prng[1]
             and self.brng[0] <= p[0] < self.brng[1]
