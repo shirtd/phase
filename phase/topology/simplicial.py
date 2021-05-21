@@ -34,14 +34,11 @@ class AlphaComplex(SimplicialComplex):
         A = diode.fill_alpha_shapes(P.astype(float), True)
         for s, f in (tqdm(A, desc='[ alpha complex') if verbose else A):
             self.add_new(s, **{key : f})
-    def get_boundary(self, F, delta, limits):
+    def get_relative(self, delta, limits):
         if delta > 0:
             Q = {i for i,p in enumerate(self.P) if is_boundary(p, delta, limits)}
-            return {i for i,s in enumerate(F) if all(v in Q for v in s)}
+            return {s for s in self.values() if all(v in Q for v in s)}
         return set()
-    def get_filtration(self, delta, limits, cycle_reps=True):
-        F = (Filtration if cycle_reps else BoundaryMatrix)(self, self.key, False)
-        return F, self.get_boundary(F, delta, limits)
 
 class DioComplex(SimplicialComplex):
     def __init__(self, simplices, key, dim):

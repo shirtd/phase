@@ -1,15 +1,24 @@
 from phase.util import diff, identity
 
+from functools import reduce
 from tqdm import tqdm
 import numpy as np
 
 
-class DiagramBase:
-    def __init__(self, sequence, coh=False):
-        self.sequence, self.coh = sequence, coh
-        self.unpairs, self.pairs, self.copairs = set(sequence), {}, {}
+class Diagram:
+    def __init__(self, F, R=set(), coh=False, cycle_reps=False, clearing=False, verbose=False):
+        self.sequence, self.n = F.get_range(R, coh), len(F) - len(R)
+        self.R, self.coh, self.dim = R, coh, F.dim
+        self.unpairs = reduce(lambda a,b: a.union(b), self.sequence, set())
+        self.pairs, self.copairs = {}, {}
+        self.D = F.get_matrix(self.sequence, coh, cycle_reps)
+        self.reduce(clearing, verbose)
+        self.diagram, self.fmap = self.get_diagram(F)
     def __iter__(self):
-        yield from (reversed(self.sequence) if self.coh else self.sequence)
+        for seq in self.sequence:
+            yield from seq
+    def __len__(self):
+        return self.n
     def __setitem__(self, b, d):
         if self.coh:
             b, d = d, b
@@ -17,41 +26,24 @@ class DiagramBase:
         self.copairs[d] = b
         self.unpairs.remove(b)
         self.unpairs.remove(d)
-    def _paired(self, low):
-        return low is not None and low in (self.copairs if self.coh else self.pairs)
     def _pair(self, low):
         pairs = self.copairs if self.coh else self.pairs
         return pairs[low] if low in pairs else None
-    def _reduce(self, D, R, i):
-        low = D[i].get_pivot(R)
-        while self._paired(low):
-            D[i] += D[self._pair(low)]
-            low = D[i].get_pivot(R)
-        if low is not None:
-            self[low] = i
-    def _phcol_reduce(self, F, R=set(), verbose=False):
-        it = tqdm(self, total=len(self.sequence), desc='[ persist') if verbose else self
-        D = F.get_matrix(self, self.coh)
-        for i in it:
-            self._reduce(D, R, i)
-        return D
-    def _clearing_reduce(self, F, R=set(), verbose=False):
-        D = F.get_matrix(self, self.coh)
-        dit = list(range(F.dim+1) if self.coh else reversed(range(F.dim+1)))
-        dseq = {dim : [] for dim in dit}
-        for i in self:
-            dseq[F[i].dim].append(i)
-        if verbose:
-            pbar = tqdm(total=len(self.sequence), desc='[ persist')
-        for dim in dit:
-            for i in dseq[dim]:
-                if not self._paired(i):
-                    self._reduce(D, R, i)
-                if verbose:
-                    pbar.update(1)
-        if verbose:
-            pbar.close()
-        return D
+    def _paired(self, low):
+        return low is not None and low in (self.copairs if self.coh else self.pairs)
+    def reduce(self, clearing=False, verbose=False, desc='[ persist'):
+        for i in (tqdm(self, total=self.n, desc=desc) if verbose else self):
+            if not (clearing or self._paired(i)):
+                low = self.D[i].get_pivot(self.R)
+                while self._paired(low):
+                    self.D[i] += self.D[self._pair(low)]
+                    low = self.D[i].get_pivot(self.R)
+                if low is not None:
+                    self[low] = i
+    def __call__(self, i):
+        if i in self.fmap:
+            return self.fmap[i]
+        return None
     def __getitem__(self, i):
         return self.pairs[i] if i in self.pairs else None
     def __contains__(self, i):
@@ -62,40 +54,44 @@ class DiagramBase:
         yield from self.pairs.keys()
     def values(self):
         yield from self.pairs.values()
+    def is_relative(self, i):
+        return i in self.R
     def get_diagram(self, F):
-        dgms = [np.ndarray((0,2), dtype=float) for d in range(F.dim+1)]
+        dgms, fmap = [np.ndarray((0,2), dtype=float) for d in range(self.dim+1)], {}
         for i,j in self.items():
             p = np.array([F[i].data[F.key], F[self[i]].data[F.key]])
             if F.reverse:
                 p = p[::-1]
+            fmap[i] = p
             if p[0] < p[1]:
                 dgms[F[i].dim] = np.vstack((dgms[F[i].dim], p))
         for i in self.unpairs:
             p = np.array([F[i].data[F.key], np.inf])
             dgms[F[i].dim] = np.vstack((dgms[F[i].dim], p))
-        return dgms
+            fmap[i] = p
+        return dgms, fmap
 
-class Diagram(DiagramBase):
-    def __init__(self, F, R=set(), coh=False, clearing=False, verbose=False):
-        self.F, self.R = F, R
-        DiagramBase.__init__(self, F.get_range(R), coh)
-        self.D = (self._clearing_reduce if clearing else self._phcol_reduce)(F, R, verbose)
-    def __contains__(self, i):
-        if not isinstance(i, int):
-            i = self.F[i]
-        return DiagramBase.__contains__(self, i)
-    def __call__(self, i):
-        if not isinstance(i, int):
-            i = self.F.index(i)
-        if i in self.pairs:
-            p = np.array([self.F(i), self.F(self[i])])
-            return p[::-1] if self.F.reverse else p
-        return np.array([self.F(i), np.inf])
-    def is_relative(self, i):
-        if not isinstance(i, int):
-            i = self.F.index(i)
-        return i in self.R
-    def persistence(self, i):
-        return diff(self(i))
-    def get_diagram(self):
-        return DiagramBase.get_diagram(self, self.F)
+# class Diagram(DiagramBase):
+#     def __init__(self, F, R=set(), coh=False, clearing=False, verbose=False):
+#         self.F, self.R = F, R
+#         DiagramBase.__init__(self, F.get_range(R), coh)
+#         self.D = (self._clearing_reduce if clearing else self._phcol_reduce)(F, R, True, verbose)
+#     def __contains__(self, i):
+#         if not isinstance(i, int):
+#             i = self.F[i]
+#         return DiagramBase.__contains__(self, i)
+#     def __call__(self, i):
+#         if not isinstance(i, int):
+#             i = self.F.index(i)
+#         if i in self.pairs:
+#             p = np.array([self.F(i), self.F(self[i])])
+#             return p[::-1] if self.F.reverse else p
+#         return np.array([self.F(i), np.inf])
+#     def is_relative(self, i):
+#         if not isinstance(i, int):
+#             i = self.F.index(i)
+#         return i in self.R
+#     def persistence(self, i):
+#         return diff(self(i))
+#     def get_diagram(self):
+#         return DiagramBase.get_diagram(self, self.F)

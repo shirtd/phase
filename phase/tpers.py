@@ -21,8 +21,7 @@ class TPers(Data, TimeSeriesPlot):
         return '%s TPers' % input_data.title
     def __init__(self, input_data, dim, pmin, pmax, bmin, bmax, dmin, dmax, average, count, lim):
         features =  ['H%d' % d for d in range(dim)]
-        self.input_data, self.dim = input_data, dim
-        self.lim = lim * input_data.limits.max()
+        self.dim, self.lim = dim, lim * input_data.limits.max()
         self.prng, self.brng, self.drng = (pmin, pmax), (bmin,bmax), (dmin,dmax)
         data = np.vstack([self(dgms, dim, average, count) for dgms in input_data])
         Data.__init__(self, data, input_data.bounds, input_data)

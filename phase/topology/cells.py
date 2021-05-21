@@ -88,7 +88,7 @@ class CellComplex:
         return self.add(Cell(s, map(self, faces), dim, **kwargs))
 
 class DualComplex(CellComplex):
-    def __init__(self, K, key, verbose):
+    def __init__(self, K, key, dim=None, verbose=False):
         CellComplex.__init__(self, K.dim)
         self.K, self.key = K, key
         T = sorted(K[3], key=lambda t: t.data[key], reverse=True)
@@ -124,7 +124,6 @@ class DualComplex(CellComplex):
         return {self.imap[s]}
     def orient_face(self, s):
         return to_path({v for v in s}, self.nbrs)
-    def get_filtration(self, delta, limits, cycle_reps=True):
-        F, R = self.K.get_filtration(self, delta, limits, cycle_reps)
-        G = (Filtration if cycle_reps else BoundaryMatrix)(self, self.key, True)
-        return G, {G.index(self(F[i])) for i in R}
+    def get_relative(self, delta, limits):
+        R = self.K.get_relative(delta, limits)
+        return {self(s) for s in R}

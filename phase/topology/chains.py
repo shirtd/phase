@@ -1,4 +1,35 @@
+from phase.util import is_boundary, partition, insert
+
 import numpy as np
+
+
+class Filtration:
+    def __init__(self, K, key, reverse):
+        self.K, self.sequence = K, K.get_sequence(key, reverse)
+        self.dim, self.key, self.reverse = K.dim, key, reverse
+        self.imap = {s : i for i, s in enumerate(self)}
+    def __call__(self, s):
+        if isinstance(s, int):
+            return self(self[s])
+        return self.K.smap[s](self.key)
+    def __len__(self):
+        return len(self.sequence)
+    def __iter__(self):
+        for s in self.sequence:
+            yield s
+    def __getitem__(self, i):
+        if isinstance(i, tuple):
+            return self.K.smap[i]
+        return self.sequence[i]
+    def index(self, s):
+        return self.imap[s]
+    def get_relative(self, delta, limits):
+        R = self.K.get_relative(delta, limits)
+        return {self.index(s) for s in R}
+    def get_range(self, R=set(), coh=False):
+        it = reversed(list(enumerate(self))) if coh else enumerate(self)
+        f = lambda L,ix: L if ix[0] in R else insert(L,ix[1].dim,ix[0])
+        return partition(f, it, self.dim+1)[::(1 if coh else -1)]
 
 class ColumnBase:
     @classmethod
@@ -76,53 +107,31 @@ class CoChain(Column, CoBoundary):
     def __repr__(self):
         return 'CoChain(%s)' % '+'.join([str(s) for s in self])
 
-class BoundaryMatrix:
-    def __init__(self, K, key, reverse):
-        self.sequence = K.get_sequence(key, reverse)
-        self.dim, self.key, self.reverse = K.dim, key, reverse
-        self.imap = {s : i for i, s in enumerate(self)}
-    def __len__(self):
-        return len(self.sequence)
-    def __iter__(self):
-        for s in self.sequence:
-            yield s
-    def __getitem__(self, i):
-        return self.sequence[i]
-    def index(self, s):
-        return self.imap[s]
+class BoundaryMatrix(Filtration):
     def sort_faces(self, s, reverse=False):
         return sorted([self.index(f) for f in s.faces], reverse=False)
     def sort_cofaces(self, s, reverse=True):
         return sorted([self.index(f) for f in s.cofaces], reverse=True)
-    def as_chain(self, s):
+    def as_boundary(self, s):
         s = self[s] if isinstance(s, int) else s
         return Boundary(self.sort_faces(s))
-    def as_cochain(self, s):
-        s = self[s] if isinstance(s, int) else s
-        return CoBoundary(self.sort_cofaces(s))
-    def get_boundary(self, rng):
-        return {i : self.as_chain(i) for i in rng}
-    def get_coboundary(self, rng):
-        return {i : self.as_cochain(i) for i in rng}
-    def get_matrix(self, rng, coh=False):
-        return self.get_coboundary(rng) if coh else self.get_boundary(rng)
-    def get_range(self, relative=set()):
-        return [i for i,s in enumerate(self) if not i in relative]
-
-class Filtration(BoundaryMatrix):
-    def __init__(self, K, key='max', reverse=False):
-        BoundaryMatrix.__init__(self, K, key, reverse)
-        self.K = K
-    def __call__(self, s):
-        if isinstance(s, int):
-            return self(self[s])
-        return self.K.smap[s](self.key)
     def as_chain(self, s):
         s = self[s] if isinstance(s, int) else s
         return Chain({s}, self.sort_faces(s))
+    def as_coboundary(self, s):
+        s = self[s] if isinstance(s, int) else s
+        return CoBoundary(self.sort_cofaces(s))
     def as_cochain(self, s):
         s = self[s] if isinstance(s, int) else s
         return CoChain({s}, self.sort_cofaces(s))
+    def get_chains(self, rng, cycle_reps=False):
+        f = self.as_chain if cycle_reps else self.as_boundary
+        return {i : f(i) for I in rng for i in I}
+    def get_cochains(self, rng, cycle_reps=False):
+        f = self.as_cochain if cycle_reps else self.as_coboundary
+        return {i : f(i) for I in rng for i in I}
+    def get_matrix(self, rng, coh=False, cycle_reps=False):
+        return (self.get_cochains if coh else self.get_chains)(rng, cycle_reps)
     def boundary(self, chain):
         if isinstance(chain, Chain):
             return Chain.sum(self.as_chain(i) for i in chain.boundary)

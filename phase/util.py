@@ -1,9 +1,16 @@
+from functools import partial, reduce
 from itertools import combinations
 from multiprocessing import Pool
-from functools import partial
 import numpy.linalg as la
 import numpy as np
 
+
+def insert(L, i, x):
+    L[i] += [x]
+    return L
+
+def partition(f, X, n):
+    return reduce(f, X, [[] for _ in range(n)])
 
 def is_boundary(p, d, l):
     return not all(d < c < u - d for c,u in zip(p, l))
@@ -37,8 +44,7 @@ def stuple(s, *args, **kw):
     return tuple(sorted(s, *args, **kw))
 
 def pmap(fun, x, *args, **kw):
-# def pmap(fun, x, max_cores=None, *args, **kw):
-    pool = Pool()#max_cores)
+    pool = Pool()
     f = partial(fun, *args, **kw)
     try:
         y = pool.map(f, x)

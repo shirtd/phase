@@ -69,7 +69,6 @@ class DataTransformation(Data):
     def get_title(cls, input_data, *args, **kwargs):
         return cls.make_title(input_data.title, *args, **kwargs)
     def __init__(self, input_data, parallel, verbose, *args, **kwargs):
-        # self.input_data = input_data
         self.limits = input_data.bounds.min(0)
         data = self.run(input_data, parallel, verbose, *args, **kwargs)
         Data.__init__(self, data, input_data.bounds, input_data, *args, **kwargs)
@@ -77,8 +76,8 @@ class DataTransformation(Data):
         sstr = '[ %s %s' % (self.get_prefix(input_data, *args, **kwargs), self.module)
         if parallel:
             print(sstr, end='')
-            t0, data = time.time(), pmap(self, input_data, verbose)
-            print(' %0.4fs' % time.time() - t0)
+            t0, data = time.time(), pmap(self, input_data, verbose=verbose)
+            print(' %0.3fs' % (time.time() - t0))
             return data
         if not verbose:
             input_data = tqdm(input_data, total=len(input_data), desc=sstr)

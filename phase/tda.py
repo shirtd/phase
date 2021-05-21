@@ -3,7 +3,7 @@ from phase.util import format_float
 
 from phase.plot.mpl import PersistencePlot
 
-from phase.topology.persist import DiagramBase, Diagram
+from phase.topology.persist import Diagram
 
 import numpy.linalg as la
 import numpy as np
@@ -16,7 +16,7 @@ class PersistenceData(DataTransformation, PersistencePlot):
         PersistencePlot.__init__(self)
 
 class Persistence(PersistenceData):
-    args = ['delta', 'coh'] + PersistenceData.args
+    args = ['delta', 'coh', 'clearing'] + PersistenceData.args
     @classmethod
     def get_prefix(cls, *args, **kwargs):
         return 'base'
@@ -40,23 +40,20 @@ class Persistence(PersistenceData):
         if coh:
             title += '-coh'
         return title
-    def __init__(self, input_data, delta, coh, parallel, verbose):
-        self.delta, self.coh = input_data.limits.max() * delta, coh
+    def __init__(self, input_data, delta, coh, clearing, parallel, verbose):
+        self.delta, self.coh, self.clearing = input_data.limits.max() * delta, coh, clearing
         PersistenceData.__init__(self, input_data, parallel, verbose, delta, coh)
-    def __call__(self, K, verbose):
-        F, R = K.get_filtration(self.delta, self.limits, False)
-        dgm = DiagramBase(F.get_range(R), self.coh)
-        # dgm._clearing_reduce(F, R, verbose)
-        dgm._phcol_reduce(F, R, verbose)
-        return dgm.get_diagram(F)
+    def __call__(self, F, verbose):
+        R = F.get_relative(self.delta, self.limits)
+        return Diagram(F, R, self.coh, False, self.clearing, verbose).diagram
 
 class PersistenceReps(Persistence):
     @classmethod
     def get_prefix(cls, *args, **kwargs):
         return 'representative'
-    def run(self, *args, **kwargs):
-        self.chain_data = Persistence.run(self, *args, **kwargs)
-        return [d.get_diagram() for d in self.chain_data]
-    def __call__(self, K, verbose):
-        F, R = K.get_filtration(self.delta, self.limits, True)
-        return Diagram(F, R, self.coh, verbose)
+    def run(self, input_data, *args, **kwargs):
+        self.reps = Persistence.run(self, input_data, *args, **kwargs)
+        return [H.diagram for H in self.reps]
+    def __call__(self, F, verbose):
+        R = F.get_relative(self.delta, self.limits)
+        return Diagram(F, R, self.coh, True, self.clearing, verbose)

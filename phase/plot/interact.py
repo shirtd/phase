@@ -1,11 +1,13 @@
+from phase.stats import PersHisto
+from phase.util import diff
+
 from phase.plot.mpl import MPLPlot, plt
 from phase.plot.pyv import ChainPlot
-from phase.stats import PersHisto
-from functools import partial
 
 from phase.topology.util import fill_birth, fill_death
 from phase.topology.cells import DualComplex
 
+from functools import partial
 import numpy.linalg as la
 import numpy as np
 import time, sys
@@ -31,17 +33,17 @@ KWARGS = { 'points' : {'radius' : 0.02, 'color' : COLORS['points']},
 
 
 class Interact:
-    def __init__(self, data):
-        self.data = data
+    def __init__(self, plot_data):
+        self.plot_data = plot_data
         self.cids, self.cur_frame_plt = {}, []
         self.last_frame, self.press_time = -1, None
     def connect(self):
-        self.cids['button_press_event'] = self.data.figure.canvas.mpl_connect('button_press_event', self.onclick)
-        self.cids['button_release_event'] = self.data.figure.canvas.mpl_connect('button_release_event', self.onrelease)
-        self.cids['key_press_event'] = self.data.figure.canvas.mpl_connect('key_press_event', self.onpress)
+        self.cids['button_press_event'] = self.plot_data.figure.canvas.mpl_connect('button_press_event', self.onclick)
+        self.cids['button_release_event'] = self.plot_data.figure.canvas.mpl_connect('button_release_event', self.onrelease)
+        self.cids['key_press_event'] = self.plot_data.figure.canvas.mpl_connect('key_press_event', self.onpress)
     def disconnect(self):
         for k in self.cids:
-            self.data.figure.canvas.mpl_disconnect(self.cids[k])
+            self.plot_data.figure.canvas.mpl_disconnect(self.cids[k])
             del self.cids[k]
     def run(self):
         input('[ Exit ]')
@@ -51,7 +53,7 @@ class Interact:
         if self.is_event(event):
             frame = self.get_closest(event)
             self.plot_frame(frame)
-            self.data.raise_figure()
+            self.plot_data.raise_figure()
     def onpress(self, event):
         if event.key == 'right':
             frame = self.get_next()
@@ -60,15 +62,15 @@ class Interact:
         else:
             return
         self.plot_frame(frame)
-        self.data.raise_figure()
+        self.plot_data.raise_figure()
     def is_event(self, event):
         if self.press_time is None or time.time() - self.press_time > 0.5:
             return False
         try:
-            iter(self.data.axis)
+            iter(self.plot_data.axis)
         except TypeError:
-            return event.inaxes == self.data.axis
-        return any(event.inaxes == ax for ax in self.data.axis)
+            return event.inaxes == self.plot_data.axis
+        return any(event.inaxes == ax for ax in self.plot_data.axis)
     def plot_frame(self, frame):
         pass
     def get_closest(self, event):
@@ -79,20 +81,21 @@ class Interact:
         pass
 
 class TPersInteractBase(Interact):
-    def __init__(self, data, value):
-        Interact.__init__(self, data)
+    def __init__(self, tpers_data, pers_data, value):
+        Interact.__init__(self, tpers_data)
+        self.tpers_data, self.pers_data = tpers_data, pers_data
         self.histo = PersHisto(data, value) if value is not None else None
-        self.data.plot()
+        self.plot_data.plot()
         plt.show(block=False)
         self.connect()
         self.plot_frame(0)
     def plot_sub(self, frame):
-        self.data.input_data.plot(frame, self.data.lim)
+        self.pers_data.plot(frame, self.tpers_data.lim)
     def plot_histo(self, frame):
         if self.histo is not None:
-            self.histo(frame, self.data.input_data[frame])
+            self.histo(frame, self.pers_data[frame])
     def plot_frame(self, frame):
-        if frame < len(self.data):
+        if frame < len(self.plot_data):
             self.last_frame = frame
             self.plot_sub(frame)
             self.plot_histo(frame)
@@ -101,26 +104,26 @@ class TPersInteractBase(Interact):
         else:
             print(' ! Invalid frame')
     def get_closest(self, event):
-        return min(max(int(np.round(event.xdata)),0), len(self.data)-1)
+        return min(max(int(np.round(event.xdata)),0), len(self.plot_data)-1)
     def plot_current(self, frame):
         while self.cur_frame_plt:
             self.cur_frame_plt.pop().remove()
-        for d, ax in enumerate(self.data.axis[1:]):
-            kwargs = {'color' : self.data.COLORS[d], 's' : 50, 'zorder' : 2}
-            self.cur_frame_plt.append(ax.scatter([frame], [self.data[frame,d]], **kwargs))
-            self.cur_frame_plt.append(self.data.axis[0].scatter([frame], [self.data[frame,d]], **kwargs))
-        self.data.update_figure()
+        for d, ax in enumerate(self.plot_data.axis[1:]):
+            kwargs = {'color' : self.plot_data.COLORS[d], 's' : 50, 'zorder' : 2}
+            self.cur_frame_plt.append(ax.scatter([frame], [self.plot_data[frame,d]], **kwargs))
+            self.cur_frame_plt.append(self.plot_data.axis[0].scatter([frame], [self.plot_data[frame,d]], **kwargs))
+        self.plot_data.update_figure()
     def get_next(self):
-        return (self.last_frame+1) % len(self.data)
+        return (self.last_frame+1) % len(self.plot_data)
     def get_prev(self):
-        return (self.last_frame-1) % len(self.data)
+        return (self.last_frame-1) % len(self.plot_data)
 
 class TPersInteract(TPersInteractBase):
-    def __init__(self, data, sub=None, value='tpers'):
+    def __init__(self, tpers_data, pers_data, sub=None, value='tpers'):
         self.sub, self.trace_start = sub, None
-        TPersInteractBase.__init__(self, data, value)
+        TPersInteractBase.__init__(self, tpers_data, pers_data, value)
     def plot_sub(self, frame):
-        self.sub.plot(frame, self.data.lim, self.data)
+        self.sub.plot(frame, self.tpers_data.lim, self.tpers_data)
         if self.trace_start is not None:
             self.sub.plot_trace(self.trace_start, frame)
     def onpress(self, event):
@@ -137,12 +140,11 @@ class TPersInteract(TPersInteractBase):
 
 
 class MyPersistenceChainPlot(ChainPlot):
-    def __init__(self, data):
-        ChainPlot.__init__(self, data, data.bounds.max(0))
-        self.data.init_fig()
+    def __init__(self, pers_data, filt_data, input_data):
+        ChainPlot.__init__(self, pers_data, filt_data, input_data, pers_data.limits)
+        self.pers_data.init_fig()
         self.dual = None
-        self.dgm = None
-        self.last_frame = None
+        # self.last_frame = None
         self.trace_points = {'primal' : None, 'dual' : None}
         self.trace_edges = {'primal' : None, 'dual' : None}
         self.options = {'dgm' : {'primal' : True, 'dual' : False, 'filled' : True},
@@ -178,12 +180,12 @@ class MyPersistenceChainPlot(ChainPlot):
                             # 'y' : self.query_range}
         self.min, self.max = -np.inf, np.inf
     def in_range(self, s):
-        return self.min < self.dgm.F(s) < self.max
+        return self.min < self.F(s) < self.max
     def query_range(self):
         pass
     def plot(self, frame):
         self.remove()
-        self.dgm = self.data.chain_data[frame]
+        self.set_frame(frame)
         self.init_dual()
         self.plot_complex()
     def plot_trace(self, a, b):
@@ -191,13 +193,13 @@ class MyPersistenceChainPlot(ChainPlot):
             self.remove('trace')
         else:
             a, b = (a, b) if a < b else (b, a)
-            Ps = self.data.input_data[a:b+1]
+            Ps = self.input_data[a:b+1]
             n = min(len(P) for P in Ps)
             E = []
             for i in range(n):
                 for k in range(1, len(Ps)):
-                    if (not (self.data.is_boundary(a+k-1, Ps[k-1][i])
-                            or self.data.is_boundary(a+k, Ps[k][i]))):
+                    if (not (is_boundary(Ps[k-1][i], self.pers_data.delta, self.pers_data.limits)
+                            or is_boundary(Ps[k][i], self.pers_data.delta, self.pers_data.limits))):
                         E.append([i + (k-1)*n, i + k*n])
             self.plot_curves(np.vstack(Ps), E, 'trace', **self.config['trace']['primal'])
     def init_fig(self):
@@ -226,11 +228,11 @@ class MyPersistenceChainPlot(ChainPlot):
                 self.plot_complex(opts, cfg)
     def get_simplices(self, pd, dim):
         if pd == 'primal':
-            Kd = self.dgm.F.K[dim]
-            return [s for s in Kd if not self.dgm.is_relative(s) and self.in_range(s)]
+            Kd = self.F.K[dim]
+            return [s for s in Kd if not self.dgm.is_relative(self.F.index(s)) and self.in_range(s)]
         elif pd == 'dual':
-            Kd = self.dgm.F.K[self.dgm.F.dim - dim]
-            return [self.get_dual(s) for s in Kd if not self.dgm.is_relative(s) and self.in_range(s)]
+            Kd = self.F.K[self.F.dim - dim]
+            return [self.get_dual(s) for s in Kd if not self.dgm.is_relative(self.F.index(s)) and self.in_range(s)]
     def plot_complex(self, opts=None, cfg=None):
         opts = self.options['complex'] if opts is None else opts
         cfg = self.config['complex'] if cfg is None else cfg
@@ -239,23 +241,23 @@ class MyPersistenceChainPlot(ChainPlot):
                 key = '%s%d' % (pd, dim)
                 if tog:
                     S = self.get_simplices(pd, dim)
-                    K = self.dgm.F.K if pd == 'primal' else self.dual
+                    K = self.F.K if pd == 'primal' else self.dual
                     self.plot_chain(S, dim, key, K, **cfg[pd][dim])
                 else:
                     self.remove(key)
     def plot_rep(self, i, opts=None, cfg=None):
         opts = self.options['dgm'] if opts is None else opts
         cfg = self.config['dgm'] if cfg is None else cfg
-        s = self.get_simplex(i)
+        s = self.F[i]
         if opts['primal'] or opts['dual']:
-            K, B = self.dgm.F.K, self.dgm.D[i]
-            bdim, ddim = s.dim, self.get_simplex(self.dgm[i]).dim
-            D = fill_death(self.dgm, i) if opts['filled'] else self.dgm.D[self.dgm[i]]
+            K, B = self.F.K, self.dgm.D[i]
+            bdim, ddim = s.dim, self.F[self.dgm[i]].dim
+            D = fill_death(self.dgm, self.F, i) if opts['filled'] else self.dgm.D[self.dgm[i]]
             if opts['primal']:
                 self.plot_chain(B, bdim, 'primal birth', K, **cfg['primal']['birth'])
                 self.plot_chain(D, ddim, 'primal death', K, **cfg['primal']['death'])
             if opts['dual']:
-                B = fill_birth(self.dgm, i) if opts['filled'] else self.dgm.D[i]
+                B = fill_birth(self.dgm, self.F, i) if opts['filled'] else self.dgm.D[i]
                 D = self.dgm.D[self.dgm[i]]
                 dbdim, dddim = K.dim - bdim, K.dim - ddim
                 dB, dD = [self.get_dual(s) for s in B], [self.get_dual(s) for s in D]
@@ -274,9 +276,9 @@ class MyPersistenceChainPlot(ChainPlot):
 
 
 class MyPersistenceInteract(Interact, MyPersistenceChainPlot):
-    def __init__(self, data):
-        Interact.__init__(self, data)
-        MyPersistenceChainPlot.__init__(self, data)
+    def __init__(self, pers_data, filt_data, input_data):
+        Interact.__init__(self, pers_data)
+        MyPersistenceChainPlot.__init__(self, pers_data, filt_data, input_data)
         self.active_pairs = {}
         self.sorted_births = []
         self.connect()
@@ -289,12 +291,12 @@ class MyPersistenceInteract(Interact, MyPersistenceChainPlot):
         Interact.onpress(self, event)
     def plot(self, frame, lim, tpers_data):
         MyPersistenceChainPlot.plot(self, frame)
-        self.active_dgms = [tpers_data.get_range(dgm) for dgm in self.data[frame]]
-        self.active_pairs = {b : d for b,d in self.dgm.items() if tpers_data.inrng(self.dgm(b))}
-        self.sorted_births = sorted(self.active_pairs, key=lambda b: self.dgm.persistence(b), reverse=True)
+        self.active_dgms = [tpers_data.get_range(dgm) for dgm in self.pers_data[frame]]
+        self.active_pairs = {b : d for b,d in self.dgm.items() if tpers_data.inrng(self.dgm.fmap[b])}
+        self.sorted_births = sorted(self.active_pairs, key=lambda b: diff(self.dgm.fmap[b]), reverse=True)
         self.birth_imap = {b : i for i,b in enumerate(self.sorted_births)}
         self.last_frame = None
-        return self.data.plot(frame, lim, self.active_dgms)
+        return self.plot_data.plot(frame, lim, self.active_dgms)
     def plot_frame(self, i=None):
         if i is None and len(self.sorted_births):
             i = self.sorted_births[0]
@@ -307,15 +309,14 @@ class MyPersistenceInteract(Interact, MyPersistenceChainPlot):
         if not len(self.active_pairs):
             return None
         p = np.array([event.xdata, event.ydata])
-        dst = lambda s: la.norm(p - self.dgm(s))
+        dst = lambda s: la.norm(p - self.dgm.fmap[s])
         return min([b for b in self.active_pairs], key=dst)
     def plot_current(self, i):
         while self.cur_frame_plt:
             self.cur_frame_plt.pop().remove()
-        s = self.dgm.F[i]
-        p = self.dgm(i)
-        self.cur_frame_plt.append(self.data.axis.scatter(p[0], p[1], s=50, color=self.data.COLORS[s.dim], zorder=2))
-        self.data.update_figure()
+        s, p = self.F[i], self.dgm.fmap[i]
+        self.cur_frame_plt.append(self.plot_data.axis.scatter(p[0], p[1], s=50, color=self.plot_data.COLORS[s.dim], zorder=2))
+        self.plot_data.update_figure()
     def get_next(self):
         return self.sorted_births[(self.birth_imap[self.last_frame]+1) % len(self.sorted_births)]
     def get_prev(self):
@@ -324,13 +325,13 @@ class MyPersistenceInteract(Interact, MyPersistenceChainPlot):
 class AlphaPersistenceInteract(MyPersistenceInteract):
     is_dual = False
     def init_dual(self):
-        self.dual = DualComplex(self.dgm.F.K, 'alpha')
+        self.dual = DualComplex(self.F.K, 'alpha')
     def get_dual(self, s):
         return self.dual(s)
 
 class VoronoiPersistenceInteract(MyPersistenceInteract):
     is_dual = True
     def init_dual(self):
-        self.dual = self.dgm.F.K.K
+        self.dual = self.F.K.K
     def get_dual(self, s):
-        return self.dgm.F.K.pmap[s]
+        return self.F.K.pmap[s]

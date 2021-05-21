@@ -11,7 +11,7 @@ from phase.plot.interact import TPersInteract, \
 from phase.plot.mpl import plt
 
 import pickle as pkl
-import os, sys
+import os, sys, time
 
 
 def try_cache(cls, input_args, *args, **kwargs):
@@ -20,21 +20,24 @@ def try_cache(cls, input_args, *args, **kwargs):
     fcache = os.path.join(input_args.cache, '%s.pkl' % name)
     if (not (input_args.nocache or cls.module in input_args.force)
             and os.path.exists(fcache)):
-        try:
-            print('[ Loading %s' % fcache)
-            with open(fcache, 'rb') as f:
-                return pkl.load(f)
-        except Exception as err:
-            raise err
+        print('[ loading %s' % fcache, end='')
+        t0 = time.time()
+        with open(fcache, 'rb') as f:
+            dat = pkl.load(f)
+            print(' %0.3fs' % (time.time() - t0))
+            return dat
     dat = cls(*args, **kwargs)
     if not input_args.nocache:
         if not os.path.exists(input_args.cache):
             os.makedirs(input_args.cache)
+        print('[ saving %s' % fcache, end='')
+        t0 = time.time()
         with open(fcache, 'wb') as f:
             pkl.dump(dat, f)
+            print(' %0.3fs' % (time.time() - t0))
     return dat
 
-def complex_cls(args):
+def filt_cls(args):
     return (VoronoiComplexData if args.dual
         else AlphaComplexData)
 
@@ -66,22 +69,22 @@ if __name__ == '__main__':
         with open(fcache, 'rb') as f:
             pers_data = pkl.load(f)
     elif not args.nocomplex:
-        complex_data = try_cache(complex_cls(args), args, input_data)
+        filt_data = try_cache(filt_cls(args), args, input_data)
 
         if not args.nopers:
-            pers_data = try_cache(pers_cls(args), args, complex_data)
+            pers_data = try_cache(pers_cls(args), args, filt_data)
 
     if (not args.nocomplex and not args.nopers) or args.skip:
-        tpers = TPers(pers_data, **{a : getattr(args, a) for a in TPers.args})
+        tpers_data = TPers(pers_data, **{a : getattr(args, a) for a in TPers.args})
 
         if args.interact:
             if args.reps:
-                pers_interact = pers_interact_cls(args)(pers_data)
-                tpers_interact = TPersInteract(tpers, pers_interact, args.histo)
+                pers_interact = pers_interact_cls(args)(pers_data, filt_data, input_data)
+                tpers_interact = TPersInteract(tpers_data, pers_data, pers_interact, args.histo)
             else:
-                tpers_interact = TPersInteractBase(tpers, args.histo)
+                tpers_interact = TPersInteractBase(tpers_data, pers_data, args.histo)
         elif args.show:
-            tpers.plot()
+            tpers_data.plot()
             plt.show(block=False)
 
     if (args.show or args.interact) and not IPYTHON:

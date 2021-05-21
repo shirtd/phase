@@ -23,6 +23,7 @@ parser.add_argument('--lim', type=float, default=1/4, help='diagram plot limit m
 # parser.add_argument('--rips', action='store_true', help='do rips persistence')
 parser.add_argument('--reps', action='store_true', help='compute (co)cycle representatives')
 parser.add_argument('--skip', action='store_true', help='skip to cached diagram.')
+parser.add_argument('--clearing', action='store_true', help='clearing optimization.')
 
 parser.add_argument('--delta', default=1/8, type=float, help='distance to boundary multiplier (multiplied by max bounds, relative homology)')
 # parser.add_argument('--omega', default=0., type=float, help='modulo sub-levelset (relative homology)')
