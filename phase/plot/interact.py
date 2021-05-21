@@ -335,3 +335,7 @@ class VoronoiPersistenceInteract(MyPersistenceInteract):
         self.dual = self.F.K.K
     def get_dual(self, s):
         return self.F.K.pmap[s]
+
+def pers_interact_cls(args):
+    return (VoronoiPersistenceInteract if args.dual
+        else AlphaPersistenceInteract)

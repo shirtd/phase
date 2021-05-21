@@ -57,3 +57,7 @@ class PersistenceReps(Persistence):
     def __call__(self, F, verbose):
         R = F.get_relative(self.delta, self.limits)
         return Diagram(F, R, self.coh, True, self.clearing, verbose)
+
+def pers_cls(args):
+    return (Persistence if args.nofilt or not args.reps
+        else PersistenceReps)

@@ -1,12 +1,11 @@
 from phase.args import parser
 from phase.base import InputData
 from phase.tpers import TPers
-from phase.complexes import AlphaComplexData, VoronoiComplexData
-from phase.tda import Persistence, PersistenceReps
+from phase.filtration import filt_cls
+from phase.tda import pers_cls, Persistence
 from phase.plot.interact import TPersInteract, \
                                 TPersInteractBase, \
-                                AlphaPersistenceInteract, \
-                                VoronoiPersistenceInteract
+                                pers_interact_cls
 
 from phase.plot.mpl import plt
 
@@ -14,40 +13,50 @@ import pickle as pkl
 import os, sys, time
 
 
+def get_kwargs(cls, args):
+    return {a : getattr(args, a) for a in cls.args}
+
+def load(fcache, verbose=False):
+    print('[ loading %s' % fcache, end='' if verbose else '\n')
+    t0 = time.time()
+    with open(fcache, 'rb') as f:
+        dat = pkl.load(f)
+    if verbose:
+        print(' %0.3fs' % (time.time() - t0))
+    return dat
+
+def save(dat, fcache, verbose=False):
+    print('[ saving %s' % fcache, end='' if verbose else '\n')
+    t0 = time.time()
+    with open(fcache, 'wb') as f:
+        pkl.dump(dat, f)
+    if verbose:
+        print(' %0.3fs' % (time.time() - t0))
+
 def try_cache(cls, input_args, *args, **kwargs):
+    if cls is None:
+        return
     kwargs = {**{a : getattr(input_args, a) for a in cls.args}, **kwargs}
     name = cls.get_name(*args, **kwargs)
     fcache = os.path.join(input_args.cache, '%s.pkl' % name)
     if (not (input_args.nocache or cls.module in input_args.force)
             and os.path.exists(fcache)):
-        print('[ loading %s' % fcache, end='')
-        t0 = time.time()
-        with open(fcache, 'rb') as f:
-            dat = pkl.load(f)
-            print(' %0.3fs' % (time.time() - t0))
-            return dat
+        return load(fcache, input_args.verbose)
     dat = cls(*args, **kwargs)
     if not input_args.nocache:
         if not os.path.exists(input_args.cache):
             os.makedirs(input_args.cache)
-        print('[ saving %s' % fcache, end='')
-        t0 = time.time()
-        with open(fcache, 'wb') as f:
-            pkl.dump(dat, f)
-            print(' %0.3fs' % (time.time() - t0))
+        save(dat, fcache, input_args.verbose)
     return dat
 
-def filt_cls(args):
-    return (VoronoiComplexData if args.dual
-        else AlphaComplexData)
-
-def pers_cls(args):
-    return (PersistenceReps if args.reps
-        else Persistence)
-
-def pers_interact_cls(args):
-    return (VoronoiPersistenceInteract if args.dual
-        else AlphaPersistenceInteract)
+def skip_filt(input_data, args):
+    filt_t, pers_t = filt_cls(args), Persistence
+    filt_name = filt_t.get_name(input_data, **get_kwargs(filt_t, args))
+    pers_name = Persistence.make_name(filt_name, **get_kwargs(Persistence, args))
+    fcache = os.path.join(args.cache, '%s.pkl' % pers_name)
+    if os.path.exists(fcache):
+        return load(fcache, args.verbose)
+    print('! %s is not cached' % fcache)
 
 if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == 'wrap':
@@ -58,24 +67,21 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
     input_data = try_cache(InputData, args)
+    pers_data = None
 
-    if args.skip:
-        comp, pers = complex_cls(args), pers_cls(args)
-        comp_kw = {a : getattr(args, a) for a in comp.args}
-        pers_kw = {a : getattr(args, a) for a in pers.args}
-        name = pers.make_name(comp.get_name(input_data, **comp_kw), **pers_kw)
-        fcache = os.path.join(args.cache, '%s.pkl' % name)
-        print('[ Loading %s' % fcache)
-        with open(fcache, 'rb') as f:
-            pers_data = pkl.load(f)
-    elif not args.nocomplex:
+    if args.nofilt and not args.nopers:
+        pers_data = skip_filt(input_data, args)
+        if pers_data is None:
+            args.nofilt = False
+
+    if not args.nofilt:
         filt_data = try_cache(filt_cls(args), args, input_data)
 
-        if not args.nopers:
-            pers_data = try_cache(pers_cls(args), args, filt_data)
+    if not args.nopers and pers_data is None:
+        pers_data = try_cache(pers_cls(args), args, filt_data)
 
-    if (not args.nocomplex and not args.nopers) or args.skip:
-        tpers_data = TPers(pers_data, **{a : getattr(args, a) for a in TPers.args})
+    if not args.nopers:
+        tpers_data = TPers(pers_data, **get_kwargs(TPers, args))
 
         if args.interact:
             if args.reps:

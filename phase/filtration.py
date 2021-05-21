@@ -8,22 +8,22 @@ import numpy.linalg as la
 import numpy as np
 
 
-class ComplexData(DataTransformation):
-    module = 'complex'
+class FiltrationData(DataTransformation):
+    module = 'filt'
     args = ['dim'] + DataTransformation.args
     @classmethod
     def get_name(cls, input_data, dim, *args, **kwargs):
-        dstr = '' if dim == input_data.shape[-1] else '%dD' % dim
+        dstr = '' if dim == input_data.dim else '%dD' % dim
         return '%s_%s%s' % (input_data.name, cls.get_prefix(), dstr)
     @classmethod
     def get_title(cls, input_data, dim, *args, **kwargs):
-        dstr = '' if dim == input_data.shape[-1] else '%dD' % dim
+        dstr = '' if dim == input_data.dim else '%dD' % dim
         return '%s %s %s' % (input_data.title, cls.get_prefix(), dstr)
     def __init__(self, input_data, dim, parallel, verbose, *args, **kwargs):
         self.dim, self.input_dim = dim, input_data.dim
         DataTransformation.__init__(self, input_data, parallel, verbose, dim, *args, **kwargs)
 
-class AlphaComplexData(ComplexData):
+class AlphaFiltrationData(FiltrationData):
     @classmethod
     def get_prefix(cls, *args, **kwargs):
         return 'alpha'
@@ -31,7 +31,7 @@ class AlphaComplexData(ComplexData):
         K = AlphaComplex(d, 'alpha', self.dim, verbose)
         return BoundaryMatrix(K, 'alpha', False)
 
-class VoronoiComplexData(ComplexData):
+class VoronoiFiltrationData(FiltrationData):
     @classmethod
     def get_prefix(cls, *args, **kwargs):
         return 'dual'
@@ -39,3 +39,7 @@ class VoronoiComplexData(ComplexData):
         K = AlphaComplex(d, 'alpha', self.input_dim, verbose)
         G = DualComplex(K, 'alpha', self.dim, verbose)
         return BoundaryMatrix(G, 'alpha', True)
+
+def filt_cls(args):
+    return (VoronoiFiltrationData if args.dual
+        else AlphaFiltrationData)
