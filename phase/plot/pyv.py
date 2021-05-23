@@ -19,6 +19,10 @@ class PYVPlot:
         self.elements = {}
         self.actors = {}
         self.bounds = bounds
+    def __contains__(self, key):
+        return key in self.actors
+    def __getitem__(self, key):
+        return self.actors[key]
     def clear_fig(self, close=False):
         if close:
             if self.figure is not None:
@@ -40,6 +44,22 @@ class PYVPlot:
         self.actors[key] = self.figure.add_mesh(element, **kwargs)
         self.elements[key] = element
         return self.elements[key]
+    def hide(self, key=None, keep=set()):
+        if key is None:
+            keys = [k for k in self.actors]
+            for key in keys:
+                if not key in keep:
+                    self[key].VisibilityOff()
+        elif key in self.elements:
+            self[key].VisibilityOff()
+    def show(self, key=None, keep=set()):
+        if key is None:
+            keys = [k for k in self.actors]
+            for key in keys:
+                if not key in keep:
+                    self[key].VisibilityOn()
+        elif key in self.elements:
+            self[key].VisibilityOn()
     def remove(self, key=None, keep=set()):
         if key is None:
             keys = [k for k in self.actors]
@@ -80,18 +100,27 @@ class ChainPlot(PYVPlot):
     def __init__(self, pers_data, filt_data, input_data, bounds):
         PYVPlot.__init__(self, bounds)
         self.pers_data, self.filt_data, self.input_data = pers_data, filt_data, input_data
-        self.dgm, self.F, self.P = None, None, None
+        self.last_frame_sup, self.dgm, self.F, self.P = None, None, None, None
     def set_frame(self, frame):
+        self.last_frame_sup = frame
         self.dgm = self.pers_data.reps[frame]
         self.F = self.filt_data[frame]
         self.P = self.input_data[frame]
     def format_cycle(self, C, dim, K=None):
         K = self.F.K if K is None else K
+        # C = [self.F[i] for i in c]
         return ([v for s in C for v in s] if dim == 0
             else [list(s) for s in C if len(s) == 2] if dim == 1
             else [K.orient_face(s) for s in C] if dim == 2
             else list(map(K.orient_face, {f for t in C for f in t.faces})) if dim == 3
             else [])
+    # def format_cycle(self, C, dim, K=None):
+    #     K = self.F.K if K is None else K
+    #     return ([v for s in C for v in s] if dim == 0
+    #         else [list(self.Fs) for s in C if len(s) == 2] if dim == 1
+    #         else [K.orient_face(s) for s in C] if dim == 2
+    #         else list(map(K.orient_face, {f for t in C for f in t.faces})) if dim == 3
+    #         else [])
     def plot_chain(self, c, dim, key, K=None, P=None, **kwargs):
         K = self.F.K if K is None else K
         c = self.format_cycle(c, dim, K)

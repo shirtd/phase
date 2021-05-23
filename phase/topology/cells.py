@@ -14,14 +14,10 @@ class Cell(tuple):
         tuple.__init__(self)
         self.dim, self.data = dim, kwargs
         self.faces, self.cofaces = [], []
-        try:
-            if self.dim > 0:
-                for f in faces:
-                    self.faces.append(tuple(f))
-                    f.add_coface(self)
-        except TypeError as err:
-            print(vertices, list(faces))
-            raise err
+        if self.dim > 0:
+            for f in faces:
+                self.faces.append(tuple(f))
+                f.add_coface(self)
     def add_coface(self, coface):
         self.cofaces.append(tuple(coface))
     def items(self):
@@ -34,21 +30,14 @@ class Cell(tuple):
         return None
 
 class CellComplex:
+    __slots__ = ['dim', 'cells', 'smap']
     def __init__(self, dim):
         self.dim = dim
         self.cells = {d : set() for d in range(dim+1)}
         self.smap = {}
-    # def get_sequence(self, key, dim, reverse=False):
-    #     r = -1 if reverse else 1
-    #     if dim < self.dim:
-    #         S = [self[dim] for dim in range(dim+1)]
-    #         values = reduce(lambda a,b: a + list(b), S, [])
-    #     else:
-    #         values = self.values()
-    #     return sorted(values, key=lambda s: (r * s.data[key], s))
     def get_sequence(self, key, reverse=False):
         r = -1 if reverse else 1
-        return sorted(self.values(), key=lambda s: (r * s.data[key], s))
+        return sorted(self.keys(), key=lambda s: (r * self(s).data[key], s))
     def items(self):
         yield from self.cells.items()
     def keys(self):
@@ -88,6 +77,7 @@ class CellComplex:
         return self.add(Cell(s, map(self, faces), dim, **kwargs))
 
 class DualComplex(CellComplex):
+    __slots__ = ['K', 'key', 'imap', 'P', 'dmap', 'pmap', 'nbrs']
     def __init__(self, K, key, dim=None, verbose=False):
         CellComplex.__init__(self, K.dim)
         self.K, self.key = K, key
@@ -110,20 +100,23 @@ class DualComplex(CellComplex):
             if len(e) == 2:
                 self.nbrs[e[0]].add(e[1])
                 self.nbrs[e[1]].add(e[0])
-    def __call__(self, s):
+    def dual(self, s):
         return self.dmap[s]
+    # def __call__(self, s):
+    #     return self.dmap[s]
     def get_dual(self, s):
         dim = self.dim - s.dim
         vs = self.get_vertices(s)
-        faces = [self.dmap[f] for f in s.cofaces]
+        faces = [self.dual(f) for f in s.cofaces]
         return Cell(vs, faces, dim, **s.data)
     def get_vertices(self, s):
-        s = self.K.smap[s]
+        s = self.K(s)
         if s.dim < 3:
             return {v for f in s.cofaces for v in self.get_vertices(f)}
         return {self.imap[s]}
     def orient_face(self, s):
         return to_path({v for v in s}, self.nbrs)
     def get_relative(self, delta, limits):
+        # return {s for s in self[2] if len(s.cofaces) == 1}
         R = self.K.get_relative(delta, limits)
-        return {self(s) for s in R}
+        return {self.dual(s) for s in R}

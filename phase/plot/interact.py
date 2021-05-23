@@ -1,5 +1,5 @@
 from phase.stats import PersHisto
-from phase.util import diff
+from phase.util import diff, is_boundary
 
 from phase.plot.mpl import MPLPlot, plt
 from phase.plot.pyv import ChainPlot
@@ -147,7 +147,7 @@ class MyPersistenceChainPlot(ChainPlot):
         # self.last_frame = None
         self.trace_points = {'primal' : None, 'dual' : None}
         self.trace_edges = {'primal' : None, 'dual' : None}
-        self.options = {'dgm' : {'primal' : True, 'dual' : False, 'filled' : True},
+        self.options = {'dgm' : {'primal' : True, 'dual' : False, 'filled' : False},
                         'complex' : {'primal' : {0 : True, 1 : True, 2 : True},
                                         'dual' : {0 : False, 1 : False, 2 : False}},
                         'trace' : {'primal' : False, 'dual' : False}}
@@ -184,9 +184,11 @@ class MyPersistenceChainPlot(ChainPlot):
     def query_range(self):
         pass
     def plot(self, frame):
-        self.remove()
+        # self.remove()
+        self.hide()
         self.set_frame(frame)
-        self.init_dual()
+        self.dual = None
+        # self.init_dual()
         self.plot_complex()
     def plot_trace(self, a, b):
         if a == b:
@@ -215,7 +217,8 @@ class MyPersistenceChainPlot(ChainPlot):
         self.figure.camera_position = [(center[0] * 10, center[1], center[2]), center, (0, 0, 1)]
         self.figure.camera_set = True
     def reset(self):
-        self.remove(keep={'trace'})
+        # self.remove(keep={'trace'})
+        self.hide(keep={'trace'})
         self.plot_complex()
     def toggle(self, key, toggle, *args, force=None):
         opts, cfg = self.options[key], self.config[key]
@@ -238,37 +241,50 @@ class MyPersistenceChainPlot(ChainPlot):
         cfg = self.config['complex'] if cfg is None else cfg
         for pd, opt in opts.items():
             for dim, tog in opt.items():
-                key = '%s%d' % (pd, dim)
-                if tog:
+                key = 'frame%d%s%d' % (self.last_frame_sup, pd, dim)
+                if tog and not key in self:
                     S = self.get_simplices(pd, dim)
                     K = self.F.K if pd == 'primal' else self.dual
                     self.plot_chain(S, dim, key, K, **cfg[pd][dim])
-                else:
-                    self.remove(key)
+                elif tog:
+                    self[key].VisibilityOn()
+                elif key in self:
+                    self[key].VisibilityOff()
     def plot_rep(self, i, opts=None, cfg=None):
         opts = self.options['dgm'] if opts is None else opts
         cfg = self.config['dgm'] if cfg is None else cfg
         s = self.F[i]
-        if opts['primal'] or opts['dual']:
-            K, B = self.F.K, self.dgm.D[i]
-            bdim, ddim = s.dim, self.F[self.dgm[i]].dim
-            D = fill_death(self.dgm, self.F, i) if opts['filled'] else self.dgm.D[self.dgm[i]]
-            if opts['primal']:
-                self.plot_chain(B, bdim, 'primal birth', K, **cfg['primal']['birth'])
-                self.plot_chain(D, ddim, 'primal death', K, **cfg['primal']['death'])
-            if opts['dual']:
-                B = fill_birth(self.dgm, self.F, i) if opts['filled'] else self.dgm.D[i]
-                D = self.dgm.D[self.dgm[i]]
+        bdim, ddim = s.dim, self.F[self.dgm[i]].dim
+        key = 'frame%d%s' % (self.last_frame_sup, ' filled' if opts['filled'] else '')
+        bkey, dkey = '%s birth %d' % (key, self.last_frame), '%s death %d' % (key, self.last_frame)
+        pbkey, pdkey, dbkey, ddkey = 'primal %s' % bkey, 'primal %s' % dkey, 'dual %s' % bkey, 'dual %s' % dkey
+        if opts['primal']:
+            if not (pbkey in self and pdkey in self):
+                K, B = self.F.K, [self.F[j] for j in self.dgm.D[i]]
+                Didx = fill_death(self.dgm, self.F, i) if opts['filled'] else self.dgm.D[self.dgm[i]]
+                D = [self.F[j] for j in Didx]
+                self.plot_chain(B, bdim, pbkey, K, **cfg['primal']['birth'])
+                self.plot_chain(D, ddim, pdkey, K, **cfg['primal']['death'])
+            else:
+                self.show(pbkey)
+                self.show(pdkey)
+        else:
+            self.hide(pbkey)
+            self.hide(pdkey)
+        if opts['dual']:
+            if not (dbkey in self and ddkey in self):
+                Bidx = fill_birth(self.dgm, self.F, i) if opts['filled'] else self.dgm.D[i]
+                B, D = [self.F[j] for j in Bidx], [self.F[j] for j in self.dgm.D[self.dgm[i]]]
                 dbdim, dddim = K.dim - bdim, K.dim - ddim
                 dB, dD = [self.get_dual(s) for s in B], [self.get_dual(s) for s in D]
-                self.plot_chain(dB, dbdim, 'dual birth', self.dual, **cfg['dual']['birth'])
-                self.plot_chain(dD, dddim, 'dual death', self.dual, **cfg['dual']['death'])
-        if not opts['primal']:
-            self.remove('primal birth')
-            self.remove('primal death')
-        if not opts['dual']:
-            self.remove('dual birth')
-            self.remove('dual death')
+                self.plot_chain(dB, dbdim, dbkey, self.dual, **cfg['dual']['birth'])
+                self.plot_chain(dD, dddim, ddkey, self.dual, **cfg['dual']['death'])
+            else:
+                self.show(dbkey)
+                self.show(ddkey)
+        else:
+            self.hide(dbkey)
+            self.hide(ddkey)
     def init_dual(self):
         pass
     def get_dual(self, i):
@@ -327,13 +343,17 @@ class AlphaPersistenceInteract(MyPersistenceInteract):
     def init_dual(self):
         self.dual = DualComplex(self.F.K, 'alpha')
     def get_dual(self, s):
-        return self.dual(s)
+        if self.dual is None:
+            self.init_dual()
+        return self.dual.dual(s)
 
 class VoronoiPersistenceInteract(MyPersistenceInteract):
     is_dual = True
     def init_dual(self):
         self.dual = self.F.K.K
     def get_dual(self, s):
+        if self.dual is None:
+            self.init_dual()
         return self.F.K.pmap[s]
 
 def pers_interact_cls(args):

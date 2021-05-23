@@ -6,6 +6,7 @@ import numpy as np
 
 
 class Diagram:
+    __slots__ = ['sequence', 'n', 'R', 'coh', 'dim', 'unpairs', 'pairs', 'copairs', 'D', 'diagram', 'fmap']
     def __init__(self, F, R=set(), coh=False, cycle_reps=False, clearing=False, verbose=False):
         self.sequence, self.n = F.get_range(R, coh), len(F) - len(R)
         self.R, self.coh, self.dim = R, coh, F.dim
@@ -33,7 +34,7 @@ class Diagram:
         return low is not None and low in (self.copairs if self.coh else self.pairs)
     def reduce(self, clearing=False, verbose=False, desc='[ persist'):
         for i in (tqdm(self, total=self.n, desc=desc) if verbose else self):
-            if not (clearing or self._paired(i)):
+            if not (clearing and self._paired(i)):
                 low = self.D[i].get_pivot(self.R)
                 while self._paired(low):
                     self.D[i] += self.D[self._pair(low)]

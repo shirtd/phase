@@ -3,35 +3,8 @@ from phase.util import is_boundary, partition, insert
 import numpy as np
 
 
-class Filtration:
-    def __init__(self, K, key, reverse):
-        self.K, self.sequence = K, K.get_sequence(key, reverse)
-        self.dim, self.key, self.reverse = K.dim, key, reverse
-        self.imap = {s : i for i, s in enumerate(self)}
-    def __call__(self, s):
-        if isinstance(s, int):
-            return self(self[s])
-        return self.K.smap[s](self.key)
-    def __len__(self):
-        return len(self.sequence)
-    def __iter__(self):
-        for s in self.sequence:
-            yield s
-    def __getitem__(self, i):
-        if isinstance(i, tuple):
-            return self.K.smap[i]
-        return self.sequence[i]
-    def index(self, s):
-        return self.imap[s]
-    def get_relative(self, delta, limits):
-        R = self.K.get_relative(delta, limits)
-        return {self.index(s) for s in R}
-    def get_range(self, R=set(), coh=False):
-        it = reversed(list(enumerate(self))) if coh else enumerate(self)
-        f = lambda L,ix: L if ix[0] in R else insert(L,ix[1].dim,ix[0])
-        return partition(f, it, self.dim+1)[::(1 if coh else -1)]
-
 class ColumnBase:
+    __slots__ = ['boundary', 'm']
     @classmethod
     def sum(cls, *chains):
         return sum(*chains, cls())
@@ -74,6 +47,37 @@ class ColumnBase:
     def __add__(self, other):
         return type(self)(self._add_boundary(other))
 
+class Filtration:
+    __slots__ = ['K', 'key', 'sequence', 'dim', 'key', 'reverse', 'imap']
+    def __init__(self, K, key, reverse):
+        self.K, self.sequence = K, K.get_sequence(key, reverse)
+        self.dim, self.key, self.reverse = K.dim, key, reverse
+        self.imap = {tuple(s) : i for i, s in enumerate(self)}
+    def __call__(self, s):
+        if isinstance(s, int):
+            return self(self[s])
+        return self.K(s)(self.key)
+    def __len__(self):
+        return len(self.sequence)
+    def __iter__(self):
+        for s in self.sequence:
+            yield self.K(s)
+    def __getitem__(self, i):
+        if isinstance(i, tuple):
+            return self.K(i)
+        # elif isinstance(i, ColumnBase):
+        #     return [self[j] for j in i]
+        return self.K(self.sequence[i])
+    def index(self, s):
+        return self.imap[s]
+    def get_relative(self, delta, limits):
+        R = self.K.get_relative(delta, limits)
+        return {self.index(s) for s in R}
+    def get_range(self, R=set(), coh=False):
+        it = reversed(list(enumerate(self))) if coh else enumerate(self)
+        f = lambda L,ix: L if ix[0] in R else insert(L,ix[1].dim,ix[0])
+        return partition(f, it, self.dim+1)[::(1 if coh else -1)]
+
 class Boundary(ColumnBase):
     def _cmp(self, a, b):
         return a < b
@@ -83,6 +87,7 @@ class CoBoundary(ColumnBase):
         return a > b
 
 class Column(ColumnBase):
+    __slots__ = ['boundary', 'm', 'simplices', 'n']
     def __init__(self, simplices=set(), boundary=[]):
         self.simplices = simplices
         self.n = len(self.simplices)
@@ -109,20 +114,26 @@ class CoChain(Column, CoBoundary):
 
 class BoundaryMatrix(Filtration):
     def sort_faces(self, s, reverse=False):
+        s = self[s] if isinstance(s, int) else s
         return sorted([self.index(f) for f in s.faces], reverse=False)
     def sort_cofaces(self, s, reverse=True):
+        s = self[s] if isinstance(s, int) else s
         return sorted([self.index(f) for f in s.cofaces], reverse=True)
     def as_boundary(self, s):
-        s = self[s] if isinstance(s, int) else s
+        # s = self[s] if isinstance(s, int) else s
+        s = self.index(s) if isinstance(s, tuple) else s
         return Boundary(self.sort_faces(s))
     def as_chain(self, s):
-        s = self[s] if isinstance(s, int) else s
+        # s = self[s] if isinstance(s, int) else s
+        s = self.index(s) if isinstance(s, tuple) else s
         return Chain({s}, self.sort_faces(s))
     def as_coboundary(self, s):
-        s = self[s] if isinstance(s, int) else s
+        # s = self[s] if isinstance(s, int) else s
+        s = self.index(s) if isinstance(s, tuple) else s
         return CoBoundary(self.sort_cofaces(s))
     def as_cochain(self, s):
-        s = self[s] if isinstance(s, int) else s
+        # s = self[s] if isinstance(s, int) else s
+        s = self.index(s) if isinstance(s, tuple) else s
         return CoChain({s}, self.sort_cofaces(s))
     def get_chains(self, rng, cycle_reps=False):
         f = self.as_chain if cycle_reps else self.as_boundary

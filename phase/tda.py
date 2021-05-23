@@ -19,7 +19,7 @@ class Persistence(PersistenceData):
     args = ['delta', 'coh', 'clearing'] + PersistenceData.args
     @classmethod
     def get_prefix(cls, *args, **kwargs):
-        return 'base'
+        return 'pers'
     @classmethod
     def make_name(cls, input_name, delta, coh, *args, **kwargs):
         name = '%s_%s' % (input_name, cls.get_prefix())
@@ -50,7 +50,7 @@ class Persistence(PersistenceData):
 class PersistenceReps(Persistence):
     @classmethod
     def get_prefix(cls, *args, **kwargs):
-        return 'representative'
+        return '%s-rep' % (Persistence.get_prefix(cls, *args, **kwargs))
     def run(self, input_data, *args, **kwargs):
         self.reps = Persistence.run(self, input_data, *args, **kwargs)
         return [H.diagram for H in self.reps]
@@ -58,6 +58,30 @@ class PersistenceReps(Persistence):
         R = F.get_relative(self.delta, self.limits)
         return Diagram(F, R, self.coh, True, self.clearing, verbose)
 
+
+# class CachedPersistenceData(CachedDataTransformation, PersistenceData):
+#     module = 'persist'
+#     def __init__(self, input_data, frames, cache, parallel, verbose, *args, **kwargs):
+#         CachedDataTransformation.__init__(self, input_data, frames, parallel, verbose, *args, **kwargs)
+#         PersistencePlot.__init__(self)
+#
+# class CachedPersistence(CachedPersistenceData, Persistence):
+#     args = ['delta', 'coh', 'clearing'] + CachedPersistenceData.args
+#     def __init__(self, input_data, delta, coh, clearing, frames, cache, parallel, verbose):
+#         self.delta, self.coh, self.clearing = input_data.limits.max() * delta, coh, clearing
+#         CachedPersistenceData.__init__(self, input_data, frames, parallel, verbose, delta, coh)
+#     def __call__(self, F, verbose):
+#         pass
+#
+# class CachedPersistenceReps(CachedPersistenceData, PersistenceReps):
+#     args = ['delta', 'coh', 'clearing'] + CachedPersistenceData.args
+#     def __init__(self, input_data, delta, coh, clearing, frames, cache, parallel, verbose):
+#         self.delta, self.coh, self.clearing = input_data.limits.max() * delta, coh, clearing
+#         CachedPersistenceData.__init__(self, input_data, frames, parallel, verbose, delta, coh)
+#     def run(self, input_data, *args, **kwargs):
+#         pass
+
+
 def pers_cls(args):
-    return (Persistence if args.nofilt or not args.reps
-        else PersistenceReps)
+    return (PersistenceReps if args.reps
+        else Persistence)

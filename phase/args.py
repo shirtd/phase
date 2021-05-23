@@ -1,12 +1,21 @@
 import numpy as np
 import argparse
 
-
 parser = argparse.ArgumentParser(prog='tpers')
 parser.add_argument('--directory', default='data', help='data directory.')
-parser.add_argument('--dataset', default='lennard-jones', help='data set')
-parser.add_argument('--file', default='melt.xyz', help='data file')
-parser.add_argument('--frames', nargs=2, type=int, default=(30040,30060), help='frames to load')
+
+# parser.add_argument('--dataset', default='lennard-jones', help='data set')
+# parser.add_argument('--file', default='melt.xyz', help='data file')
+# parser.add_argument('--frames', nargs=2, type=int, default=(30040,30060), help='frames to load')
+
+parser.add_argument('--dataset', default='water-first-order', help='data set')
+
+# parser.add_argument('--file', default='ih_hda.xyz', help='data file')
+# parser.add_argument('--frames', nargs=2, type=int, default=(126,138), help='frames to load')
+
+parser.add_argument('--file', default='lda_hda.xyz', help='data file')
+parser.add_argument('--frames', nargs=2, type=int, default=(84,108), help='frames to load')
+
 # parser.add_argument('--frames', nargs=2, type=int, help='frames to load')
 parser.add_argument('--cache', default='cache', help='cache directory')
 parser.add_argument('--force', nargs='?', default=[], const=['input', 'filt', 'persist'], help='force module cache override')
@@ -22,7 +31,7 @@ parser.add_argument('--thresh', type=float, default=3/8, help='rips persistence 
 parser.add_argument('--lim', type=float, default=1/4, help='diagram plot limit multiplier (multiplied by max bounds)')
 # parser.add_argument('--rips', action='store_true', help='do rips persistence')
 parser.add_argument('--reps', action='store_true', help='compute (co)cycle representatives')
-parser.add_argument('--skip', action='store_true', help='skip to cached diagram.')
+# parser.add_argument('--skip', action='store_true', help='skip to cached diagram.')
 parser.add_argument('--clearing', action='store_true', help='clearing optimization.')
 
 parser.add_argument('--delta', default=1/8, type=float, help='distance to boundary multiplier (multiplied by max bounds, relative homology)')
@@ -43,3 +52,6 @@ parser.add_argument('--dmin', type=float, default=-np.inf, help='minimum death')
 parser.add_argument('--dmax', type=float, default=np.inf, help='maximum death')
 parser.add_argument('--average', action='store_true', help='average total persistence')
 parser.add_argument('--count', action='store_true', help='count persistence')
+
+
+# python main.py --parallel --clearing --coh

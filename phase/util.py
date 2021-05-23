@@ -2,7 +2,31 @@ from functools import partial, reduce
 from itertools import combinations
 from multiprocessing import Pool
 import numpy.linalg as la
+import pickle as pkl
 import numpy as np
+import sys, time, gc
+
+
+def load(fcache):
+    sys.stdout.write('[ loading %s...' % fcache)
+    sys.stdout.flush()
+    t0 = time.time()
+    with open(fcache, 'rb') as f:
+        gc.disable()
+        dat = pkl.load(f)
+        gc.enable()
+    print(' %0.3fs' % (time.time() - t0))
+    return dat
+
+def save(dat, fcache):
+    sys.stdout.write('[ saving %s...' % fcache)
+    sys.stdout.flush()
+    t0 = time.time()
+    with open(fcache, 'wb') as f:
+        gc.disable()
+        pkl.dump(dat, f)
+        gc.enable()
+    print(' %0.3fs' % (time.time() - t0))
 
 
 def insert(L, i, x):
