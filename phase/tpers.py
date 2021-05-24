@@ -39,3 +39,28 @@ class TPers(Data, TimeSeriesPlot):
         return ([sum(p) / len(p) if len(p) else 0 for p in ps] if average
             else [len(p) for p in ps] if count
             else [sum(p) for p in ps])
+
+
+# class TPersAgg(TPers):
+#     def __init__(self, input_data, dim, pmin, pmax, bmin, bmax, dmin, dmax, average, count, lim, verbose):
+#         # bounds = np.vstack([d.bounds for d in input_data])
+#         # input_data[0].data = [d for D in input_data for d in D]
+#         # self.input_data = input_data[0]
+#         features =  ['H%d' % d for d in range(dim)]
+#         self.dim, self.lim = dim, lim * bounds.min(0).max()
+#         self.prng, self.brng, self.drng = (pmin, pmax), (bmin,bmax), (dmin,dmax)
+#         it = tqdm(input_data, total=len(input_data), desc='[ tpers') if verbose else input_data
+#         data = np.vstack([self(dgms, dim, average, count) for dgms in it])
+#         Data.__init__(self, data, bounds, input_data)
+#         TimeSeriesPlot.__init__(self, features, dim+1, 1, sharex=True, figsize=(12,8))
+#     # def inrng(self, p):
+#     #     return (self.prng[0] <= p[1] - p[0] < self.prng[1]
+#     #         and self.brng[0] <= p[0] < self.brng[1]
+#     #         and self.drng[0] <= p[1] < self.drng[1])
+#     # def get_range(self, dgm):
+#     #     return dgm[[i for i,p in enumerate(dgm) if self.inrng(p)]]
+#     # def __call__(self, dgms, dim, average, count):
+#     #     ps = [[d - b for b,d in self.get_range(dgm)] for dgm in dgms[:dim+1]]
+#     #     return ([sum(p) / len(p) if len(p) else 0 for p in ps] if average
+#     #         else [len(p) for p in ps] if count
+#     #         else [sum(p) for p in ps])

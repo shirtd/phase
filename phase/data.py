@@ -10,6 +10,14 @@ DATA = {'lennard-jones' : ['melt.xyz'],
 DATASET = 'lennard-jones'
 LOGFILE = 'melt.xyz'
 
+BOUNDS = {'lennard-jones' : {'melt.xyz' : [8., 8., 8.]},
+        'water-first-order' : {'lda_hda.xyz' : [61., 53., 50.],
+                                'ih_hda.xyz' : [61., 53., 50.]}}
+
+FRAMES = {'lennard-jones' : {'melt.xyz' : (30038, 30062)},
+        'water-first-order' : {'lda_hda.xyz' : (87, 99),
+                                'ih_hda.xyz' : (126, 138)}}
+
 
 def parse_line(line):
     l = line.replace('\n', '').split()
@@ -36,7 +44,8 @@ def parse_file(fname, frng=None):
             pass
     return frames
 
-def get_bounds(input_data, dataset):
-    if dataset == 'lennard-jones':
-        return np.array([[8., 8., 8.] for _ in input_data])
+def get_bounds(input_data, dataset, file):
+    if dataset in BOUNDS:
+        if file in BOUNDS[dataset]:
+            return np.array([BOUNDS[dataset][file] for _ in input_data])
     return np.array([[float(c) for c in d['bounds']] for d in input_data])

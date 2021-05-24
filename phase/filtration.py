@@ -12,13 +12,15 @@ class FiltrationData(DataTransformation):
     module = 'filt'
     args = ['dim'] + DataTransformation.args
     @classmethod
-    def get_name(cls, input_data, dim, *args, **kwargs):
-        dstr = '' if dim == input_data.dim else '%dD' % dim
-        return '%s_%s%s' % (input_data.name, cls.get_prefix(), dstr)
+    def make_name(cls, input_name, dim, *args, **kwargs):
+        return '%s_%s' % (input_name, cls.get_prefix())
+        # dstr = '' if dim == input_data.dim else '%dD' % dim
+        # return '%s_%s%s' % (input_data.name, cls.get_prefix(), dstr)
     @classmethod
-    def get_title(cls, input_data, dim, *args, **kwargs):
-        dstr = '' if dim == input_data.dim else '%dD' % dim
-        return '%s %s %s' % (input_data.title, cls.get_prefix(), dstr)
+    def make_title(cls, input_title, dim, *args, **kwargs):
+        return '%s %s' % (input_title, cls.get_prefix())
+        # dstr = '' if dim == input_data.dim else '%dD' % dim
+        # return '%s %s %s' % (input_data.title, cls.get_prefix(), dstr)
     def __init__(self, input_data, dim, parallel, verbose, *args, **kwargs):
         self.dim, self.input_dim = dim, input_data.dim
         DataTransformation.__init__(self, input_data, parallel, verbose, dim, *args, **kwargs)
@@ -40,6 +42,10 @@ class VoronoiFiltrationData(FiltrationData):
         G = DualComplex(K, 'alpha', self.dim, verbose)
         return BoundaryMatrix(G, 'alpha', True)
 
+def filt_cls(args):
+    return (VoronoiFiltrationData if args.dual
+        else AlphaFiltrationData)
+
 
 # class CachedFiltrationData(CachedDataTransformation, FiltrationData):
 #     args = ['dim'] + CachedDataTransformation.args
@@ -54,8 +60,3 @@ class VoronoiFiltrationData(FiltrationData):
 # class CachedVoronoiFiltrationData(CachedFiltrationData, VoronoiFiltrationData):
 #     def __call__(self, d, verbose):
 #         pass
-
-
-def filt_cls(args):
-    return (VoronoiFiltrationData if args.dual
-        else AlphaFiltrationData)

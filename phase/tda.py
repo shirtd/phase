@@ -58,6 +58,11 @@ class PersistenceReps(Persistence):
         R = F.get_relative(self.delta, self.limits)
         return Diagram(F, R, self.coh, True, self.clearing, verbose)
 
+def pers_cls(args):
+    return (PersistenceReps if args.reps
+        else Persistence)
+
+
 
 # class CachedPersistenceData(CachedDataTransformation, PersistenceData):
 #     module = 'persist'
@@ -80,8 +85,3 @@ class PersistenceReps(Persistence):
 #         CachedPersistenceData.__init__(self, input_data, frames, parallel, verbose, delta, coh)
 #     def run(self, input_data, *args, **kwargs):
 #         pass
-
-
-def pers_cls(args):
-    return (PersistenceReps if args.reps
-        else Persistence)

@@ -120,19 +120,15 @@ class BoundaryMatrix(Filtration):
         s = self[s] if isinstance(s, int) else s
         return sorted([self.index(f) for f in s.cofaces], reverse=True)
     def as_boundary(self, s):
-        # s = self[s] if isinstance(s, int) else s
         s = self.index(s) if isinstance(s, tuple) else s
         return Boundary(self.sort_faces(s))
     def as_chain(self, s):
-        # s = self[s] if isinstance(s, int) else s
         s = self.index(s) if isinstance(s, tuple) else s
         return Chain({s}, self.sort_faces(s))
     def as_coboundary(self, s):
-        # s = self[s] if isinstance(s, int) else s
         s = self.index(s) if isinstance(s, tuple) else s
         return CoBoundary(self.sort_cofaces(s))
     def as_cochain(self, s):
-        # s = self[s] if isinstance(s, int) else s
         s = self.index(s) if isinstance(s, tuple) else s
         return CoChain({s}, self.sort_cofaces(s))
     def get_chains(self, rng, cycle_reps=False):

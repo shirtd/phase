@@ -10,7 +10,7 @@ from phase.topology.cells import DualComplex
 from functools import partial
 import numpy.linalg as la
 import numpy as np
-import time, sys
+import time, sys, pprint
 
 
 COLORS = { 'points' : 'white',
@@ -31,12 +31,19 @@ KWARGS = { 'points' : {'radius' : 0.02, 'color' : COLORS['points']},
             'dual birth' : {'color' : COLORS['dual birth']},
             'dual death' : {'color' : COLORS['dual death']}}
 
+# self.config['complex']['primal'][2]
 
 class Interact:
-    def __init__(self, plot_data):
+    def __init__(self, plot_data, title, desc, help):
         self.plot_data = plot_data
+        self.title, self.desc, self.help = title, desc, help
         self.cids, self.cur_frame_plt = {}, []
         self.last_frame, self.press_time = -1, None
+    def print_help(self):
+        print('[ %s' % self.title)
+        print('  * The following keyboard commands are available %s:' % self.desc)
+        for k,v in self.help.items():
+            print('\t[%s]\t%s' % (k,v))
     def connect(self):
         self.cids['button_press_event'] = self.plot_data.figure.canvas.mpl_connect('button_press_event', self.onclick)
         self.cids['button_release_event'] = self.plot_data.figure.canvas.mpl_connect('button_release_event', self.onrelease)
@@ -81,14 +88,20 @@ class Interact:
         pass
 
 class TPersInteractBase(Interact):
-    def __init__(self, tpers_data, pers_data, value):
-        Interact.__init__(self, tpers_data)
+    def __init__(self, tpers_data, pers_data, value, print_help=True):
+        title = 'Total persistence interactive plot'
+        desc = 'in the TPers context'
+        help = {'left' : 'previous diagram',
+                    'right' : 'next diagram'}
+        Interact.__init__(self, tpers_data, title, desc, help)
         self.tpers_data, self.pers_data = tpers_data, pers_data
         self.histo = PersHisto(data, value) if value is not None else None
         self.plot_data.plot()
         plt.show(block=False)
         self.connect()
         self.plot_frame(0)
+        if print_help:
+            self.print_help()
     def plot_sub(self, frame):
         self.pers_data.plot(frame, self.tpers_data.lim)
     def plot_histo(self, frame):
@@ -119,9 +132,12 @@ class TPersInteractBase(Interact):
         return (self.last_frame-1) % len(self.plot_data)
 
 class TPersInteract(TPersInteractBase):
-    def __init__(self, tpers_data, pers_data, sub=None, value='tpers'):
+    def __init__(self, tpers_data, pers_data, sub=None, value='tpers', print_help=True):
         self.sub, self.trace_start = sub, None
-        TPersInteractBase.__init__(self, tpers_data, pers_data, value)
+        TPersInteractBase.__init__(self, tpers_data, pers_data, value, False)
+        self.help['t'] = 'toggle trace: turn on point trajectory plot starting at current frame'
+        if print_help:
+            self.print_help()
     def plot_sub(self, frame):
         self.sub.plot(frame, self.tpers_data.lim, self.tpers_data)
         if self.trace_start is not None:
@@ -162,6 +178,7 @@ class MyPersistenceChainPlot(ChainPlot):
                                                 1 : {**KWARGS['edges'], **{'color' : '#404040'}},
                                                 2 : {**KWARGS['faces'], **{'color' : '#c2a5cf'}}}},
                         'trace' : {'primal' : {'color' : '#ffff99', 'radius' : None}}}
+
         self.key_events = { 'x' : self.reset,
                             'z' : self.reset_view,
                             'p' : partial(self.toggle, 'dgm', 'primal'),
@@ -178,6 +195,26 @@ class MyPersistenceChainPlot(ChainPlot):
                             '9' : partial(self.toggle, 'complex', 'primal', 0, 1, 2, force=False),
                             '7' : partial(self.toggle, 'complex', 'dual', 0, 1, 2, force=False)}#,
                             # 'y' : self.query_range}
+        self.title = 'Cycle representative plot'
+        self.desc = 'in the complex (3D) and persistence diagram contexts'
+        self.help = {'x' : 'reset plot: remove all reps, leaving only the complex.',
+                    'z' :'reset view: return to default side view.',
+                    'p' : 'primal: toggle primal representatives (default: %s).' % self.options['dgm']['primal'],
+                    'd' : 'dual: toggle dual representatives (default: %s).' % self.options['dgm']['dual'],
+                    'c' : 'fill/complete: toggle filled death chains (default: %s).' % self.options['dgm']['filled'],
+                    '0' : 'primal 0: toggle primal 0 simplices (default: %s).' % self.options['complex']['primal'][0],
+                    '6' : 'dual 0: toggle dual 0 simplices (default: %s).' % self.options['complex']['dual'][0],
+                    '1' : 'primal 1: toggle primal 1 simplices (default: %s).' % self.options['complex']['primal'][1],
+                    '5' : 'dual 1: toggle dual 1 simplices (default: %s).' % self.options['complex']['dual'][1],
+                    '2' : 'primal 2: toggle primal 2 simplices (default: %s).' % self.options['complex']['primal'][2],
+                    '4' : 'dual 2: toggle dual 2 simplices (default: %s).' % self.options['complex']['dual'][2],
+                    '8' : 'primal on: show all primal simplices.',
+                    # '6' : 'dual on: show all dual simplices.',
+                    '9' : 'primal off: hide all primal simplices.',
+                    '7' : 'dual off: hide all dual simplices.',
+                    'right' : 'next feature (sorted by total persistence)',
+                    'left' : 'previous feature (sorted by total persistence)'}
+                    # 'y' : self.query_range}}
         self.min, self.max = -np.inf, np.inf
     def in_range(self, s):
         return self.min < self.F(s) < self.max
@@ -217,7 +254,6 @@ class MyPersistenceChainPlot(ChainPlot):
         self.figure.camera_position = [(center[0] * 10, center[1], center[2]), center, (0, 0, 1)]
         self.figure.camera_set = True
     def reset(self):
-        # self.remove(keep={'trace'})
         self.hide(keep={'trace'})
         self.plot_complex()
     def toggle(self, key, toggle, *args, force=None):
@@ -241,7 +277,7 @@ class MyPersistenceChainPlot(ChainPlot):
         cfg = self.config['complex'] if cfg is None else cfg
         for pd, opt in opts.items():
             for dim, tog in opt.items():
-                key = 'frame%d%s%d' % (self.last_frame_sup, pd, dim)
+                key = '%s %d' % (self.get_frame_key(pd), dim)
                 if tog and not key in self:
                     S = self.get_simplices(pd, dim)
                     K = self.F.K if pd == 'primal' else self.dual
@@ -250,14 +286,26 @@ class MyPersistenceChainPlot(ChainPlot):
                     self[key].VisibilityOn()
                 elif key in self:
                     self[key].VisibilityOff()
+    def get_frame_key(self, pd):
+        return 'frame%d %s' % (self.last_frame_sup, pd)
+    def get_rep_keys(self, i, pd, opts=None, cfg=None):
+        opts = self.options['dgm'] if opts is None else opts
+        cfg = self.config['dgm'] if cfg is None else cfg
+        fstr = ' filled' if opts['filled'] else ''
+        key = '%s%s %s' % (self.get_frame_key(pd), fstr, i)
+        return '%s birth' % key, '%s death' % key
+    def hide_reps(self, i):
+        pkeys = self.get_rep_keys(self.last_frame, 'primal')
+        dkeys = self.get_rep_keys(self.last_frame, 'dual')
+        for key in pkeys + dkeys:
+            self.hide(key)
     def plot_rep(self, i, opts=None, cfg=None):
         opts = self.options['dgm'] if opts is None else opts
         cfg = self.config['dgm'] if cfg is None else cfg
         s = self.F[i]
         bdim, ddim = s.dim, self.F[self.dgm[i]].dim
-        key = 'frame%d%s' % (self.last_frame_sup, ' filled' if opts['filled'] else '')
-        bkey, dkey = '%s birth %d' % (key, self.last_frame), '%s death %d' % (key, self.last_frame)
-        pbkey, pdkey, dbkey, ddkey = 'primal %s' % bkey, 'primal %s' % dkey, 'dual %s' % bkey, 'dual %s' % dkey
+        pbkey, pdkey = self.get_rep_keys(self.last_frame, 'primal')
+        dbkey, ddkey = self.get_rep_keys(self.last_frame, 'dual')
         if opts['primal']:
             if not (pbkey in self and pdkey in self):
                 K, B = self.F.K, [self.F[j] for j in self.dgm.D[i]]
@@ -293,11 +341,12 @@ class MyPersistenceChainPlot(ChainPlot):
 
 class MyPersistenceInteract(Interact, MyPersistenceChainPlot):
     def __init__(self, pers_data, filt_data, input_data):
-        Interact.__init__(self, pers_data)
         MyPersistenceChainPlot.__init__(self, pers_data, filt_data, input_data)
+        Interact.__init__(self, pers_data, self.title, self.desc, self.help)
         self.active_pairs = {}
         self.sorted_births = []
         self.connect()
+        self.print_help()
     def onpress(self, event):
         for k, f in self.key_events.items():
             if event.key == k:
@@ -318,6 +367,9 @@ class MyPersistenceInteract(Interact, MyPersistenceChainPlot):
             i = self.sorted_births[0]
         elif not len(self.sorted_births):
             return
+        pbkey, pdkey = self.get_rep_keys(self.last_frame, 'primal')
+        dbkey, ddkey = self.get_rep_keys(self.last_frame, 'dual')
+        self.hide_reps(self.last_frame)
         self.last_frame = i
         self.plot_current(i)
         self.plot_rep(i)

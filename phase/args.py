@@ -4,19 +4,18 @@ import argparse
 parser = argparse.ArgumentParser(prog='tpers')
 parser.add_argument('--directory', default='data', help='data directory.')
 
-# parser.add_argument('--dataset', default='lennard-jones', help='data set')
-# parser.add_argument('--file', default='melt.xyz', help='data file')
-# parser.add_argument('--frames', nargs=2, type=int, default=(30040,30060), help='frames to load')
+parser.add_argument('--dataset', default='lennard-jones', help='data set')
+parser.add_argument('--file', default='melt.xyz', help='data file')
+# parser.add_argument('--frames', nargs=2, type=int, default=(30045,30055), help='frames to load')
 
-parser.add_argument('--dataset', default='water-first-order', help='data set')
+parser.add_argument('--preset', choices=['generate', 'tpers', 'reps'],
+                        help='generate: generate data. adds --parallel --clearing,\
+                            tpers: lightweight plot for potentially many frames. adds --agg --interact,\
+                            reps: interactive complex plot (slow for many large frames). adds --reps --interact.')
 
-# parser.add_argument('--file', default='ih_hda.xyz', help='data file')
-# parser.add_argument('--frames', nargs=2, type=int, default=(126,138), help='frames to load')
+parser.add_argument('--default-frames', action='store_true', help='choose frames based on dataset/file')
 
-parser.add_argument('--file', default='lda_hda.xyz', help='data file')
-parser.add_argument('--frames', nargs=2, type=int, default=(84,108), help='frames to load')
-
-# parser.add_argument('--frames', nargs=2, type=int, help='frames to load')
+parser.add_argument('--frames', nargs=2, type=int, help='frames to load')
 parser.add_argument('--cache', default='cache', help='cache directory')
 parser.add_argument('--force', nargs='?', default=[], const=['input', 'filt', 'persist'], help='force module cache override')
 parser.add_argument('--parallel', action='store_true', help='compute in parallel')
@@ -25,17 +24,14 @@ parser.add_argument('--nopers', action='store_true', help='do not compute persis
 parser.add_argument('--verbose', action='store_true', help='verbose progress bars')
 parser.add_argument('--nocache', action='store_true', help='ignore cache')
 
+parser.add_argument('--agg', action='store_true', help='attempt to agrregate cached persistence data')
 
 parser.add_argument('--dim', type=int, default=3, help='max persistence dimension')
-parser.add_argument('--thresh', type=float, default=3/8, help='rips persistence threshold multiplier (multiplied by max bounds)')
 parser.add_argument('--lim', type=float, default=1/4, help='diagram plot limit multiplier (multiplied by max bounds)')
-# parser.add_argument('--rips', action='store_true', help='do rips persistence')
 parser.add_argument('--reps', action='store_true', help='compute (co)cycle representatives')
-# parser.add_argument('--skip', action='store_true', help='skip to cached diagram.')
 parser.add_argument('--clearing', action='store_true', help='clearing optimization.')
 
 parser.add_argument('--delta', default=1/8, type=float, help='distance to boundary multiplier (multiplied by max bounds, relative homology)')
-# parser.add_argument('--omega', default=0., type=float, help='modulo sub-levelset (relative homology)')
 
 parser.add_argument('--coh', action='store_true', help='do persistent cohomology')
 parser.add_argument('--dual', action='store_true', help='do dual voronoi persistence')
@@ -53,5 +49,4 @@ parser.add_argument('--dmax', type=float, default=np.inf, help='maximum death')
 parser.add_argument('--average', action='store_true', help='average total persistence')
 parser.add_argument('--count', action='store_true', help='count persistence')
 
-
-# python main.py --parallel --clearing --coh
+parser.add_argument('--thresh', type=float, default=3/8, help='rips persistence threshold multiplier (multiplied by max bounds)')
