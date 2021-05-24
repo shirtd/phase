@@ -16,23 +16,28 @@ Running
 Will run the program with the default behavior for the default dataset (lennard-jones, melt.xyz).
 For a given dataset and file the `--default-frames` flag will automatically load frames surrounding the phase transition:
 
-    * lennard-jones, melt.xyz: 30038-30062
-    * water-first-order, ih_hda.xyz: 126-138
-    * water-first-order, lda_hda.xyz: 87-99.
+- `lennard-jones/melt.xyz`: 30038-30062
+- `water-first-order/ih_hda.xyz`: 126-138
+- `water-first-order/lda_hda.xyz`: 87-99.
 
 The default behavior is as follows:
 
-    * load frames,
-    * select points "close" to the boundary of the simulation (proportional to bounding box width, multiplicative factor set with `--delta`),
-    * compute relative persistent homology using the alpha (Delaunay) filtration.
+1. load frames,
+2. select points "close" to the boundary of the simulation (proportional to bounding box width, multiplicative factor set with `--delta`),
+3. compute relative persistent homology using the alpha (Delaunay) filtration.
 
 Without any additional arguments the program will quit upon completion.
 
 #### Caching
 
-The input data (the frames specified) and the results from the persistence computation are saved in a binary format in the directory specified by `--cache` (default: `./cache`).
+The input data (the frames specified), the filtration, and the results from the persistence computation are each saved separately in a binary format in the directory specified by `--cache` (default: `./cache`).
 Given a set of parameters the program will check if there exists a cached version of any stage of the computation, and load it.
 The `--force` flag will force override any cached data, with `--force input`, `--force filt`, `--force persist` overwriting only the cached input, filtration, or persistence data, respectively.
+The largest of these is always the filtration.
+If a computation is cached you can load the persistence diagram without the filtration by passing `--nofilt`.
+This functionality is encapsulated by the `tpers` preset (see below).
+In this case, interaction is limited to the total persistence curve and persistence diagrams.
+This should be used to quickly load the total persistence curve from a large number of frames.
 
 #### Additional arguments
 
@@ -88,9 +93,9 @@ The following is displayed by running `python main.py --help`
 For most cases using `--preset` with `--default-frames` should suffice.
 The presets are each intended for a specific application:
 
-    * `generate`: populating the cache.
-    * `tpers`: loading only persistence diagram and viewing the persistence curve (uses `--agg`, see below).
-    * `reps`: load all data and interact with 3D simplicial complex (see discussion and warnings below).
+- `generate`: populating the cache.
+- `tpers`: loading only persistence diagram and viewing the persistence curve (uses `--agg`, see below).
+- `reps`: load all data and interact with 3D simplicial complex (see discussion and warnings below).
 
 In any of these cases are effectively four different computations that can take place on two different filtrations.
 The default is ordinary persistence on the alpha complex, no flags required:
@@ -215,3 +220,28 @@ However, because the dual complex stores more data it will take longer to load i
 
 I would like to eventually factor the 3D complex plot functionality out of the cycle representative plot.
 This way you can only load the data required for the simplicial complex, with the option of loading additional persistence diagram, and cycle representative data.
+
+
+## TODO
+
+#### Interaction
+
+- Plot complex as one mesh: figure out how to toggle visibility of faces, points, and edges.
+- Filtration value slider.
+- Factor complex plot out of `--reps`. Should be possible to only load and view complexes. Representative interaction would inherit from this.
+- Plot quality options.
+- Toggle clear reps override.
+- Caching meshes?
+
+#### Frontend
+
+- Smart caching at the object level.
+- Proper database of individual frames.
+- Dispatch class.
+- Fix bounds.
+
+#### Backend
+
+- Redo everything with simplex trees.
+- Limit complex dimension. Should be done at the complex level to reduce file size as much as possible.
+- Implement alpha and dual filtration by hand. Don't store alpha complex in dual complex.
