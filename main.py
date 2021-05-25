@@ -69,7 +69,7 @@ def load_range(input_data, args):
     pers_datas = [load(fdict[l]) for l in sorted(intervals)]
     pers_data = pers_datas[0]
     pers_data.data = [d for D in pers_datas for d in D]
-    return pers_data
+    return pers_data, pers_datas
 
 if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == 'wrap':
@@ -91,14 +91,17 @@ if __name__ == '__main__':
             args.interact = True
 
     if args.default_frames:
-        args.frames = FRAMES[args.dataset][args.file]
+        if args.dataset in FRAMES and args.file in FRAMES[args.dataset]:
+            args.frames = FRAMES[args.dataset][args.file]
+        else:
+            print(' ! no default frames for %s, %s. aborting.' % (args.dataset, args.file))
 
 
     input_data = try_cache(InputData, args)
     pers_data = None
 
     if args.agg:
-        pers_data = load_range(input_data, args)
+        pers_data, pers_datas = load_range(input_data, args)
         if pers_data is None:
             sys.exit(1)
 

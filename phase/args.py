@@ -27,7 +27,7 @@ parser.add_argument('--nocache', action='store_true', help='ignore cache')
 parser.add_argument('--agg', action='store_true', help='attempt to agrregate cached persistence data')
 
 parser.add_argument('--dim', type=int, default=3, help='max persistence dimension')
-parser.add_argument('--lim', type=float, default=1/4, help='diagram plot limit multiplier (multiplied by max bounds)')
+parser.add_argument('--lim', type=float, default=1/3, help='diagram plot limit multiplier (multiplied by max bounds)')
 parser.add_argument('--reps', action='store_true', help='compute (co)cycle representatives')
 parser.add_argument('--clearing', action='store_true', help='clearing optimization.')
 

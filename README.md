@@ -125,7 +125,7 @@ I like 12.
 There are 300 frames total in this dataset.
 The following bash command will generate all of the data for alpha homology persistence:
 
-    for n in {0..287..12}
+    for n in {0..299..12}
     do
         python main.py --preset generate --frames $n $((n+12)) --dataset water-first-order --file lda_hda.xyz
     done

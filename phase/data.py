@@ -12,7 +12,8 @@ LOGFILE = 'melt.xyz'
 
 BOUNDS = {'lennard-jones' : {'melt.xyz' : [8., 8., 8.]},
         'water-first-order' : {'lda_hda.xyz' : [61., 53., 50.],
-                                'ih_hda.xyz' : [61., 53., 50.]}}
+                                'ih_hda.xyz' : [61., 53., 50.]},
+        'water-glass' : {'traj.xyz' : [24.5, 24.5, 24.5]}}
 
 FRAMES = {'lennard-jones' : {'melt.xyz' : (30038, 30062)},
         'water-first-order' : {'lda_hda.xyz' : (87, 99),
